@@ -1,12 +1,13 @@
 import { LightningElement, api } from "lwc";
 
 export default class FieldPickerField extends LightningElement {
+    //TODO: /** @type {Field} */
     @api field;
     @api additionalClass = "";
     @api actions = [];
 
     handleFieldHover() {
-        this.dispatchEvent(new CustomEvent("fieldmouseover", { detail: this.field.value }));
+        this.dispatchEvent(new CustomEvent("fieldmouseover", { detail: this.field.apiName }));
     }
 
     handleFieldMouseOut() {
@@ -16,5 +17,9 @@ export default class FieldPickerField extends LightningElement {
     handleActionClick(event) {
         const actionName = event.currentTarget.dataset.name;
         this.dispatchEvent(new CustomEvent(actionName, { detail: this.field }));
+    }
+
+    handleFieldClick() {
+        this.dispatchEvent(new CustomEvent("fieldclick", { detail: this.field }));
     }
 }

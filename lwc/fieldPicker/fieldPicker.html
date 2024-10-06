@@ -21,7 +21,7 @@
                         </lightning-layout-item>
 
                         <lightning-layout-item size="8" class="slds-p-horizontal_medium slds-p-vertical_xx-small">
-                            <h4>{baseObject} Fields</h4>
+                            <h4>{currentObject} Fields</h4>
                         </lightning-layout-item>
                     </lightning-layout>
 
@@ -32,11 +32,12 @@
                                     <fieldset aria-describedby="lookup-fields" class="slds-nav-vertical">
                                         <template for:each={lookupFields} for:item="field">
                                             <c-field-picker-field
-                                                key={field.value}
+                                                key={field.apiName}
                                                 field={field}
                                                 actions={lookupFieldActions}
                                                 onfieldmouseover={handleFieldHover}
                                                 onfieldmouseout={handleFieldMouseOut}
+                                                onfieldclick={handleFieldClick}
                                                 ongodeeperclick={handleGoDeeper}
                                             ></c-field-picker-field>
                                         </template>
@@ -71,10 +72,11 @@
                                     <template if:true={hasRegularFields}>
                                         <template for:each={regularFields} for:item="field">
                                             <c-field-picker-field
-                                                key={field.value}
+                                                key={field.apiName}
                                                 field={field}
                                                 onfieldmouseover={handleFieldHover}
                                                 onfieldmouseout={handleFieldMouseOut}
+                                                onfieldclick={handleFieldClick}
                                             ></c-field-picker-field>
                                         </template>
                                     </template>

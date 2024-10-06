@@ -1,15 +1,10 @@
-export const LOOKUP_LEVEL_MAP = {
-    PARENT: "lookup-",
-    CHILD: "child-lookup-",
-    NONE: "NONE"
-};
+/** @typedef {import('c/fieldPickerFilter/utils').FilterOption} FilterOption */
 
 const FIELD_TYPE_ICON_MAP = {
     STRING: "utility:text",
     TEXTAREA: "utility:textarea",
     PICKLIST: "utility:picklist_choice",
     MULTIPICKLIST: "utility:multi_picklist",
-    BOOLEAN: "utility:multi_select_checkbox",
     DATE: "utility:date_input",
     DATETIME: "utility:date_time",
     TIME: "utility:clock",
@@ -27,62 +22,28 @@ const FIELD_TYPE_ICON_MAP = {
     RICH_TEXT_AREA: "utility:display_rich_text",
     IMAGE: "utility:image",
     ENCRYPTED_STRING: "utility:lock",
-    TEXT: "utility:text"
+    TEXT: "utility:text",
+    BOOLEAN: "utility:multi_select_checkbox"
+};
+
+const ALLOWED_FIELD_TYPES = Object.keys(FIELD_TYPE_ICON_MAP);
+const ALL_FILTERS = ALLOWED_FIELD_TYPES.map((key) => ({ label: key.replace(/_/g, " ").toLowerCase(), value: key, icon: FIELD_TYPE_ICON_MAP[key] }));
+
+/** @returns {FilterOption[]} */
+export const getAvailableFilters = (currentFields, allowedFieldTypes) => {
+    const currentFieldTypes = new Set(currentFields.map((field) => field.type));
+    const allowedFieldTypesSet = new Set(allowedFieldTypes || ALLOWED_FIELD_TYPES);
+
+    const availableFilters = ALL_FILTERS.filter((filter) => currentFieldTypes.has(filter.value)).map((filter) => ({
+        ...filter,
+        isDisabled: !allowedFieldTypesSet.has(filter.value)
+    }));
+
+    return availableFilters;
 };
 
 export const getFieldTypeIcon = (fieldType) => {
     return FIELD_TYPE_ICON_MAP[fieldType] || "utility:question";
 };
 
-export const MODAL_CLASS = {
-    large: "slds-modal slds-fade-in-open slds-modal_large",
-    small: "slds-modal slds-fade-in-open slds-modal_small"
-};
-
-const adjustFieldName = (apiName) => (apiName.endsWith("__c") ? apiName.replace("__c", "__r") : apiName);
-
-export const getFieldPath = (lookupFieldName, childLookupFieldName, selectedField) => {
-    let path = "";
-    if (lookupFieldName) path += adjustFieldName(lookupFieldName);
-    if (childLookupFieldName) path += `.${adjustFieldName(childLookupFieldName)}`;
-    if (selectedField) path += `${path ? "." : ""}${selectedField}`;
-    return path;
-};
-
-export const mapNonLookupFields = (fields) => {
-    return fields
-        .filter((field) => !field.isLookup)
-        .map((field) => ({
-            isUpdateable: field.isUpdateable,
-            label: field.label,
-            value: field.apiName,
-            type: field.type,
-            iconName: getFieldTypeIcon(field.type)
-        }));
-};
-
-export const mapLookupFields = (fields, level) => {
-    const lookupFields = fields.filter((field) => field.isLookup);
-
-    if (level === LOOKUP_LEVEL_MAP.PARENT) {
-        return lookupFields.map((field) => ({
-            ...field,
-            key: `${LOOKUP_LEVEL_MAP.PARENT}${field.apiName}`,
-            isDisabled: !field.relationshipName,
-            isExpanded: false,
-            childLookupFields: []
-        }));
-    }
-    if (level === LOOKUP_LEVEL_MAP.CHILD) {
-        return lookupFields;
-    }
-};
-
-export const mapChildLookupFields = (childFields) => {
-    return childFields.map((field) => ({
-        ...field,
-        key: `${LOOKUP_LEVEL_MAP.CHILD}${field.apiName}`,
-        isDisabled: !field.relationshipName,
-        isExpanded: false
-    }));
-};
+export const LOOKUP_ACTIONS = [{ name: "godeeperclick", title: "Go Deeper", icon: "utility:jump_to_right" }];

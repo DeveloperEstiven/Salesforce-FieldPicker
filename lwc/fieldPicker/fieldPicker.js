@@ -1,150 +1,162 @@
 import { LightningElement, api, track } from "lwc";
 import getFields from "@salesforce/apex/FieldPickerController.getFields";
+import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
 
-const FIELD_TYPE_ICON_MAP = {
-    STRING: "utility:text",
-    TEXTAREA: "utility:textarea",
-    PICKLIST: "utility:picklist_choice",
-    MULTIPICKLIST: "utility:multi_picklist",
-    DATE: "utility:date_input",
-    DATETIME: "utility:date_time",
-    TIME: "utility:clock",
-    CURRENCY: "utility:currency",
-    PERCENT: "utility:percent",
-    INTEGER: "utility:number_input",
-    DOUBLE: "utility:number_input",
-    EMAIL: "utility:email",
-    PHONE: "utility:call",
-    URL: "utility:link",
-    ID: "utility:key",
-    REFERENCE: "utility:record_lookup",
-    ADDRESS: "utility:checkin",
-    GEOLOCATION: "utility:location",
-    RICH_TEXT_AREA: "utility:display_rich_text",
-    IMAGE: "utility:image",
-    ENCRYPTED_STRING: "utility:lock",
-    TEXT: "utility:text",
-    BOOLEAN: "utility:multi_select_checkbox"
-};
-const ALLOWED_FIELD_TYPES = Object.keys(FIELD_TYPE_ICON_MAP);
-const ALL_FILTERS = ALLOWED_FIELD_TYPES.map((key) => ({ label: key.replace(/_/g, " ").toLowerCase(), value: key, icon: FIELD_TYPE_ICON_MAP[key] }));
+/** @typedef {import('c/fieldPickerFilter/utils').FilterOption} FilterOption */
+/** @typedef {import('c/fieldPickerSorter/utils').SortValue} SortValue */
 
-function getAvailableFilters(currentFields, allowedFieldTypes) {
-    const currentFieldTypes = new Set(currentFields.map((field) => field.type));
-    const allowedFieldTypesSet = new Set(allowedFieldTypes || ALLOWED_FIELD_TYPES);
+/**
+ * @typedef {Object} RawField
+ * @property {string} apiName - The API Name of the field.
+ * @property {string} label - The Label of the field.
+ * @property {string} type - The Type of the field. One of DisplayType enum values. See Docs [https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_enum_Schema_DisplayType.htm]
+ * @property {string|undefined} referenceTo - API Name of the object to which this field looks. Populated only if field is a lookup
+ * @property {string|undefined} relationshipName - Name of the child-to-parent relationship. Populated only if field is a lookup
+ * @property {string} icon - The icon name associated with the filter option.
+ */
 
-    const availableFilters = ALL_FILTERS.filter((filter) => currentFieldTypes.has(filter.value)).map((filter) => ({
-        ...filter,
-        isDisabled: !allowedFieldTypesSet.has(filter.value)
-    }));
+/**
+ * @typedef {Object} Field
+ * @extends RawField
+ * @property {string} icon - The utility icon name based on field type.
+ */
 
-    return availableFilters;
-}
+/**
+ * @typedef {Object} SelectedField
+ * @extends Field
+ * @property {string} relationshipPath - The path to the field. Built using relationship names. Valid part of SOQL to get field's value. E.g. Field_B__r.Field_C__r.Field_A__c
+ */
 
-const getIconByType = (type) => {
-    return FIELD_TYPE_ICON_MAP[type] || "utility:question";
-};
+const BTN_LABEL = "Select a Field";
+const INITIAL_FILTER = "BOOLEAN";
+const MAXIMUM_DEPTH = 3;
+
+const INITIAL_BASE_OBJECT = "Account";
+// TODO: add depth validation
+
+const IS_DEBUG = true; //TODO: remove in prod
 
 export default class FieldPicker extends LightningElement {
-    @api selectButtonLabel = "Select a Field";
+    /** The label of "Select Field" button */
+    @api selectButtonLabel = BTN_LABEL;
+
+    /** Hides the Base Object from UI */
     @api isBaseObjectHidden = false;
-    @api fieldTypeFilter = "BOOLEAN";
-    @api depth = 3;
+
+    /** Filter regular fields. If provided, initial field is applied */
+    @api fieldTypeFilter = INITIAL_FILTER;
+
+    /** @type {number} Determines the maximum depth of field selection.
+     * If depth=1, then user can select a field on base object only: Field_A__c.
+     * If depth=2, then user can select a field on base object or in child record: Field_B__r.Field_A__c.
+     * If depth=3, then user can select a field on base object or in child record or in child of child: Field_B__r.Field_C__r.Field_A__c.
+     * And so on
+     */
+    @api depth = MAXIMUM_DEPTH;
+
+    /** @type {string[]}. Determines the allowed field types for selection. For example [CURRENCY, BOOLEAN] means that user can select only Currency field or Checkbox */
     @api allowedFieldTypes;
-    @api isUserFilteringDisabled;
+
+    /** @type {boolean} If true, disables the Filter button. The initial filter will be applied, but user will not be able to change it */
+    @api isUserFilteringDisabled = false;
+
+    /** @type {Field[]} First column. List of lookup fields for the current object */
+    @track lookupFields = [];
+
+    /** @type {Field[]} Second column. List of regular fields for the current object */
+    @track regularFields = [];
+
+    /** @type {LookupStack} Stores the path to the current object. if the depth > 1, then new entry is added when user goes deeper to child object. */
+    @track lookupStack = [];
+
+    /** @type {SelectedField|null} Stores information about currently selected field */
+    @track selectedField = null;
+
+    /** @type {string} API Name of the currently hovered field */
+    @track hoveredFieldApiName = "";
+
+    /** @type {string} User's input to searchbar */
+    @track searchTerm = "";
+
+    /** @type {FilterOption[]} Array of available filters for current object. Computed based on all regularFields and allowedFieldTypes */
+    @track filterOptions = [];
 
     @track isModalOpen = false;
     @track isLoading = false;
-    @track fieldOptions = [];
-    @track lookupFields = [];
-    @track regularFields = [];
-    @track lookupStack = [];
-    @track selectedField = null;
-    @track hoveredFieldApiName = "";
-    @track hoveredFieldPath = "";
-    @track searchTerm = "";
-    @track filterOptions = [];
 
-    lookupFieldActions = [{ name: "godeeperclick", title: "Go Deeper", icon: "utility:jump_to_right" }];
+    @track allowLookupSelection = true; //TODO: this should be converted to @api for prod. Currently @track for testing
 
-    connectedCallback() {
-        setTimeout(() => {
-            this.handleOpenModal();
-        }, 1000);
-    }
+    /** Adds "Go Deeper" button for lookup field */
+    lookupFieldActions = LOOKUP_ACTIONS;
 
-    handleFilterValidationError(event) {
-        this.handleError(event.detail);
-    }
+    /** @type {string} The API Name of the initial object, from which user can select a field.
+     * For example, if 'Account', then user can select only Account field.
+     * If user goes deeper to any child object, this field remains the same and is not changeable.
+     * If changed from parent, then the component's state is reset */
+    _baseObject = INITIAL_BASE_OBJECT;
 
-    handleSearchChange(event) {
-        this.searchTerm = event.target.value.toLowerCase().trim();
-    }
+    /** @type {string} The  API Name of the current object. Changes when user walks through child lookups */
+    @track currentObject = "";
 
-    handleFilterSelect(event) {
-        const filter = event.detail;
-        console.log("🟥  FieldPicker  filter:", filter);
-    }
+    /** @type {string} The valid Relationship API Name (e.g. Field_B__r.Field_C__r.Field_A__c) path to the initial selected field. If provided, then the component auto-initializes. */
+    @api initialFieldPath = "";
 
-    handleSortChange(event) {
-        const sort = event.detail;
-        console.log("🟥  FieldPicker  sort:", sort);
-    }
-
-    @track allowLookupSelection = true; //TODO api
-    _baseObject = "Account";
-    _initialFieldPath = "";
-
-    // Validation and defaults
     @api
     get baseObject() {
         return this._baseObject;
     }
     set baseObject(value) {
-        if (typeof value !== "string" || !value.trim()) {
-            console.warn("Invalid baseObject. Setting to default: Account");
-            this._baseObject = "Account";
-        } else {
-            this._baseObject = value;
-        }
+        this._baseObject = typeof value !== "string" || !value.trim() ? INITIAL_BASE_OBJECT : value;
         this.resetSelection();
     }
 
-    @api
-    get initialFieldPath() {
-        return this._initialFieldPath;
+    connectedCallback() {
+        IS_DEBUG && setTimeout(() => this.handleOpenModal(), 1000); //! DEBUG ONLY
     }
-    set initialFieldPath(value) {
-        if (typeof value !== "string") {
-            console.warn("Invalid initialFieldPath. Expected a string.");
-            this._initialFieldPath = "";
-        } else {
-            this._initialFieldPath = value;
-        }
+
+    handleSearchChange(event) {
+        this.searchTerm = event.target.value.toLowerCase().trim();
+        // TODO: implement searching
+    }
+
+    /** Executes if Filter component receives invalid initial filter (fieldTypeFilter) */
+    handleFilterValidationError(event) {
+        this.handleError(event.detail);
+    }
+
+    handleFilterSelect(event) {
+        /** @type {string|null} - one of SF field types (e.g. 'BOOLEAN', 'CURRENCY', ...). null if filter is not selected  */
+        const filter = event.detail;
+        // TODO: implement filtering
+    }
+
+    handleSortChange(event) {
+        /** @type {SortValue} - object of type {sortBy: 'Field' | 'Type', dir: 'ASC' | 'DESC'}. Cannot be null  */
+        const sort = event.detail;
+        // TODO: implement sorting
     }
 
     handleOpenModal() {
         this.isModalOpen = true;
-        if (!this.selectedField && !this._initialFieldPath) {
-            this.loadFields(this._baseObject);
+        if (!this.selectedField && !this.initialFieldPath) {
+            this.loadFields(this.baseObject);
         }
     }
 
     async loadFields(objectApiName) {
+        this.currentObject = objectApiName;
         this.isLoading = true;
         try {
+            /** @type {RawField[]} */
             const data = await getFields({ objectApiName });
-            this.fieldOptions = data.map((field) => ({
-                label: field.label,
-                value: field.apiName,
-                type: field.type,
-                isLookup: field.isLookup,
-                isUpdateable: field.isUpdateable,
-                referenceTo: field.lookupObjectApiName,
-                iconName: getIconByType(field.type)
+
+            /** @type {Field[]} */
+            const allFieldOptions = data.map((field) => ({
+                ...field,
+                icon: getFieldTypeIcon(field.type)
             }));
-            this.lookupFields = this.fieldOptions.filter((field) => field.isLookup);
-            this.regularFields = this.fieldOptions.filter((field) => !field.isLookup);
+            this.lookupFields = allFieldOptions.filter((field) => Boolean(field.referenceTo));
+            this.regularFields = allFieldOptions.filter((field) => !field.referenceTo);
             this.filterOptions = getAvailableFilters(this.regularFields, this.allowedFieldTypes);
         } catch (error) {
             this.handleError(error);
@@ -162,54 +174,39 @@ export default class FieldPicker extends LightningElement {
     }
 
     handleGoDeeper(event) {
-        console.log("🟥  FieldPicker  GO DEEPER");
+        /** @type {Field} */
+        const field = event.detail;
 
-        // const fieldValue = event.currentTarget.dataset.field;
-        // const field = [...this.lookupFields, ...this.regularFields].find((f) => f.value === fieldValue);
-        // if (!field.isLookup) {
-        //     // throw...
-        //     return;
-        // }
-        // this.lookupStack.push({
-        //     relationshipName: field.value,
-        //     objectApiName: field.referenceTo
-        // });
-        // this.selectedField = null;
-        // this.loadFields(field.referenceTo);
+        if (this.lookupStack.length >= this.depth - 1) {
+            console.warn("Max allowed depth is ", this.depth);
+            return;
+        }
+        this.lookupStack.push({
+            relationshipName: field.relationshipName,
+            objectApiName: field.referenceTo
+        });
+        this.selectedField = null;
+        this.loadFields(field.referenceTo);
     }
 
     handleFieldClick(event) {
-        const fieldValue = event.currentTarget.dataset.field;
-        const field = [...this.lookupFields, ...this.regularFields].find((f) => f.value === fieldValue);
-        if (field) {
-            if (field.isLookup) {
-                if (this.allowLookupSelection) {
-                    this.selectedField = {
-                        fieldApiName: field.value,
-                        fieldLabel: field.label,
-                        fieldType: field.type,
-                        isUpdateable: field.isUpdateable,
-                        referenceTo: field.referenceTo,
-                        relationshipPath: this.buildRelationshipPath(field.value)
-                    };
-                } else if (this.lookupStack.length < this.depth - 1) {
-                    this.lookupStack.push({
-                        relationshipName: field.value,
-                        objectApiName: field.referenceTo
-                    });
-                    this.selectedField = null;
-                    this.loadFields(field.referenceTo);
-                }
-            } else {
-                this.selectedField = {
-                    fieldApiName: field.value,
-                    fieldLabel: field.label,
-                    fieldType: field.type,
-                    isUpdateable: field.isUpdateable,
-                    relationshipPath: this.buildRelationshipPath(field.value)
-                };
+        /** @type {Field} */
+        const field = event.detail;
+        if (field.referenceTo) {
+            if (this.allowLookupSelection) {
+                this.selectedField = this.fieldWithRelationshipPath(field);
             }
+        } else {
+            this.selectedField = this.fieldWithRelationshipPath(field);
         }
+    }
+
+    /**
+     * @param {Field} field
+     * @returns {SelectedField}
+     */
+    fieldWithRelationshipPath(field) {
+        return { ...field, relationshipPath: this.buildRelationshipPath(field.apiName) };
     }
 
     buildRelationshipPath(fieldApiName = "") {
@@ -222,13 +219,12 @@ export default class FieldPicker extends LightningElement {
 
     handleSelect() {
         this.isModalOpen = false;
-        this.dispatchEvent(new CustomEvent("fieldselected", { detail: this.selectedField }));
     }
 
     handleBack() {
         if (this.lookupStack.length > 0) {
             this.lookupStack.pop();
-            const objectApiName = this.lookupStack.length > 0 ? this.lookupStack[this.lookupStack.length - 1].objectApiName : this._baseObject;
+            const objectApiName = this.lookupStack.length > 0 ? this.lookupStack[this.lookupStack.length - 1].objectApiName : this.baseObject;
             this.loadFields(objectApiName);
             this.selectedField = null;
         }
@@ -262,19 +258,9 @@ export default class FieldPicker extends LightningElement {
         return this.regularFields.length > 0;
     }
 
-    // Method to determine if a lookup field should be disabled
-    isFieldDisabled(field) {
-        if (!field.isLookup) return false;
-        if (this.allowLookupSelection) {
-            return this.lookupStack.length >= this.depth - 1;
-        }
-        return this.lookupStack.length >= this.depth - 1;
-    }
-
     resetSelection() {
         this.selectedField = null;
         this.lookupStack = [];
-        this.fieldOptions = [];
         this.lookupFields = [];
         this.regularFields = [];
     }

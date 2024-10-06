@@ -28,10 +28,10 @@ public with sharing class FieldPickerController {
                 fieldInfo.apiName = fieldDescribe.getName();
                 fieldInfo.label = fieldDescribe.getLabel();
                 fieldInfo.type = fieldDescribe.getType().name();
-                fieldInfo.isUpdateable = fieldDescribe.isUpdateable();
-                fieldInfo.isLookup = fieldDescribe.getType() == Schema.DisplayType.Reference;
-                if (fieldInfo.isLookup) {
-                    fieldInfo.lookupObjectApiName = fieldDescribe.getReferenceTo().isEmpty() ? null : fieldDescribe.getReferenceTo()[0].getDescribe().getName();
+                fieldInfo.type = fieldDescribe.getType().name();
+                if (fieldDescribe.getType() == Schema.DisplayType.Reference) {
+                    fieldInfo.referenceTo = String.valueOf(fieldDescribe.getReferenceTo()[0]);
+                    fieldInfo.relationshipName = fieldDescribe.getRelationshipName();
                 }
                 fieldInfos.add(fieldInfo);
             }
@@ -64,10 +64,8 @@ public with sharing class FieldPickerController {
         @AuraEnabled
         public String type;
         @AuraEnabled
-        public Boolean isUpdateable;
+        public String referenceTo;
         @AuraEnabled
-        public Boolean isLookup;
-        @AuraEnabled
-        public String lookupObjectApiName;
+        public String relationshipName;
     }
 }
