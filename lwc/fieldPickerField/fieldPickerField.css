@@ -1,0 +1,16 @@
+.actions {
+    position: absolute;
+    right: 9px;
+    top: 7px;
+    display: flex;
+}
+
+.action {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.slds-nav-vertical__item:hover .action {
+    visibility: visible;
+    opacity: 1;
+}

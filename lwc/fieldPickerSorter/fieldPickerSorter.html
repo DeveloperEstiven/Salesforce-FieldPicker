@@ -1,0 +1,51 @@
+<template>
+    <div class="menu-wrapper slds-is-relative" onkeydown={handleKeydown}>
+        <lightning-button-icon
+            disabled={isDisabled}
+            lwc:ref="menuButton"
+            icon-name={selectedSortOption.icon}
+            alternative-text={selectedSortOption.label}
+            variant="bare"
+            size="large"
+            title={selectedSortOption.label}
+            onclick={toggleOpen}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+        >
+        </lightning-button-icon>
+
+        <div class="slds-dropdown-trigger slds-dropdown-trigger_click" lwc:ref="menuItems">
+            <ul class="slds-dropdown slds-dropdown_right slds-dropdown_length-7 slds-dropdown_xx-small" role="menu" aria-label="Sort By">
+                <template for:each={computedSortOptions} for:item="sortOption">
+                    <li
+                        lwc:if={sortOption.isOption}
+                        key={sortOption.label}
+                        class={sortOption.itemClass}
+                        role="menuitem"
+                        data-id={sortOption.id}
+                        onclick={handleOptionSelect}
+                        aria-selected={sortOption.isSelected}
+                        aria-disabled={sortOption.isDisabled}
+                        tabindex="-1"
+                    >
+                        <a aria-checked={sortOption.isSelected} role="menuitemcheckbox" tabindex="0">
+                            <span class="slds-truncate" title={sortOption.label} style="text-transform: capitalize">
+                                <lightning-icon
+                                    lwc:if={selectedSortOption}
+                                    class="slds-m-right_x-small slds-icon_selected"
+                                    icon-name="utility:check"
+                                    size="x-small"
+                                ></lightning-icon>
+                                {sortOption.label}
+                            </span>
+                            <lightning-icon class="slds-m-left_x-small" icon-name={sortOption.icon} size="x-small" alternative-text={sortOption.label}></lightning-icon>
+                        </a>
+                    </li>
+                    <li lwc:else key={sortOption.label} tabindex="-1" class="slds-dropdown__header slds-truncate" title={sortOption.label} role="presentation">
+                        <span>{sortOption.label}</span>
+                    </li>
+                </template>
+            </ul>
+        </div>
+    </div>
+</template>

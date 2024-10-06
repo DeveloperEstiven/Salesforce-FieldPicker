@@ -1,98 +1,136 @@
 <template>
-  <div if:true={relationshipPath} class="flex gap-small">
-      <lightning-button label="Change Field" onclick={handleChangeField}></lightning-button>
-      <p>
-          <span if:false={isBaseObjectHidden} class="slds-badge">{baseObject}</span>
-          <span class="slds-badge">
-              <span if:true={fieldTypeIcon} class="slds-badge__icon slds-badge__icon_left">
-                  <lightning-icon icon-name={fieldTypeIcon} alternative-text="Field type" size="x-small"></lightning-icon>
-              </span>
-              {relationshipPath}
-          </span>
-      </p>
-  </div>
+    <lightning-button label={selectButtonLabel} onclick={handleOpenModal}></lightning-button>
+    <div if:true={selectedField}>
+        <span if:false={isBaseObjectHidden} class="slds-badge">{baseObject}</span>
+        <span class="slds-badge">{selectedField.relationshipPath}</span>
+    </div>
 
-  <lightning-button if:false={relationshipPath} label="Select Field" onclick={handleOpenModal}></lightning-button>
+    <template if:true={isModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">{selectButtonLabel}</h2>
+                </header>
 
-  <template if:true={isModalOpen}>
-      <section role="dialog" tabindex="-1" class={modalClass}>
-          <div class="slds-modal__container">
-              <div class="slds-is-relative">
-                  <lightning-spinner if:true={isLoading} alternative-text="Loading" size="medium"></lightning-spinner>
-                  <header class="slds-modal__header">
-                      <h2 class="slds-text-heading_medium">Select a Field</h2>
-                  </header>
+                <div class="slds-modal__content slds-is-relative">
+                    <lightning-spinner lwc:if={isLoading} alternative-text="Loading"></lightning-spinner>
 
-                  <div class="modal-content slds-modal__content slds-p-around_medium">
-                      <lightning-combobox if:false={baseObject} label="Select Base Object" options={objectOptions} value={baseObject} placeholder="Select an object" onchange={handleObjectChange}></lightning-combobox>
+                    <lightning-layout horizontal-align="space" class="slds-text-title_caps">
+                        <lightning-layout-item size="4" class="slds-border_right border slds-p-horizontal_medium slds-p-vertical_xx-small">
+                            <h4>Lookups</h4>
+                        </lightning-layout-item>
 
-                      <div if:true={baseObject} class="min-height slds-grid slds-wrap">
-                          <!-- Left Column: Object Library -->
-                          <section class="object-library max-height slds-col slds-size_1-of-3 slds-scrollable_y">
-                              <div class="sticky-header">
-                                  <p class="slds-p-vertical_x-small slds-text-title_caps"><strong>Object Library</strong></p>
-                              </div>
+                        <lightning-layout-item size="8" class="slds-p-horizontal_medium slds-p-vertical_xx-small">
+                            <h4>{baseObject} Fields</h4>
+                        </lightning-layout-item>
+                    </lightning-layout>
 
-                              <div class="item" onclick={handleBaseObjectClick} data-field={baseObject}>
-                                  <strong>{baseObjectLabel}</strong>
-                              </div>
+                    <lightning-layout horizontal-align="space" class="slds-border_top">
+                        <lightning-layout-item size="4" class="scrollable_y height slds-border_right border">
+                            <div class="slds-nav-vertical" aria-label="Lookup Fields">
+                                <div class="slds-nav-vertical__section">
+                                    <fieldset aria-describedby="lookup-fields" class="slds-nav-vertical">
+                                        <template for:each={lookupFields} for:item="field">
+                                            <c-field-picker-field
+                                                key={field.value}
+                                                field={field}
+                                                actions={lookupFieldActions}
+                                                onfieldmouseover={handleFieldHover}
+                                                onfieldmouseout={handleFieldMouseOut}
+                                                ongodeeperclick={handleGoDeeper}
+                                            ></c-field-picker-field>
+                                        </template>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </lightning-layout-item>
 
-                              <div class="lookup-list">
-                                  <template for:each={lookupFieldsHierarchy} for:item="lookupField">
-                                      <template if:false={lookupField.isDisabled}>
-                                          <div key={lookupField.key} class="item" data-field={lookupField.key} onmouseover={handleHoverField} onmouseleave={handleHoverOut} onclick={handleLookupClick}>
-                                              {lookupField.label}
-                                          </div>
-                                          <!-- Nested Lookup Fields -->
-                                          <template if:true={lookupField.isExpanded} for:each={lookupField.childLookupFields} for:item="childField">
-                                              <template if:false={childField.isDisabled}>
-                                                  <div key={childField.key} class="item slds-m-left_x-large" data-field={childField.key} onmouseover={handleHoverField} onmouseleave={handleHoverOut} onclick={handleChildLookupClick}>
-                                                      {childField.label}
-                                                  </div>
-                                              </template>
-                                          </template>
-                                      </template>
-                                  </template>
-                              </div>
-                          </section>
+                        <lightning-layout-item size="8">
+                            <div style="display: flex; align-items: center; gap: 0.5rem" class="slds-p-horizontal_medium slds-p-vertical_x-small slds-border_bottom">
+                                <lightning-input
+                                    style="width: 100%"
+                                    variant="label-hidden"
+                                    class="no-label"
+                                    type="search"
+                                    value={searchTerm}
+                                    onchange={handleSearchChange}
+                                ></lightning-input>
+                                <c-field-picker-sorter onsortchange={handleSortChange}></c-field-picker-sorter>
+                                <c-field-picker-filter
+                                    lwc:if={filterOptions.length}
+                                    is-disabled={isUserFilteringDisabled}
+                                    initial-filter={fieldTypeFilter}
+                                    filter-options={filterOptions}
+                                    onfilterchange={handleFilterSelect}
+                                    onvalidationerror={handleFilterValidationError}
+                                ></c-field-picker-filter>
+                            </div>
 
-                          <!-- Right Column: Field List -->
-                          <section class="max-height slds-col slds-size_2-of-3 slds-p-left_small slds-scrollable_y">
-                              <div class="sticky-header slds-var-p-bottom_xx-small">
-                                  <div class="flex" style="justify-content: space-between;">
-                                      <p class="slds-var-p-vertical_x-small slds-text-title_caps"><strong>Related Fields for {currentObject}</strong></p>
-                                      <p if:true={fieldSelectionMessage} class="slds-text-body_small slds-text-color_weak"><em>{fieldSelectionMessage}</em></p>
-                                  </div>
-                                  <lightning-input class="slds-var-m-top_xx-small" type="search" label="Search Fields" value={searchTerm} onchange={handleSearchChange}></lightning-input>
-                              </div>
+                            <div class="slds-nav-vertical__section scrollable_y height-fields">
+                                <fieldset aria-describedby="fields" class="slds-nav-vertical">
+                                    <template if:true={hasRegularFields}>
+                                        <template for:each={regularFields} for:item="field">
+                                            <c-field-picker-field
+                                                key={field.value}
+                                                field={field}
+                                                onfieldmouseover={handleFieldHover}
+                                                onfieldmouseout={handleFieldMouseOut}
+                                            ></c-field-picker-field>
+                                        </template>
+                                    </template>
+                                </fieldset>
+                            </div>
+                        </lightning-layout-item>
+                    </lightning-layout>
+                </div>
 
-                              <template if:true={filteredFields.length} for:each={filteredFields} for:item="field">
-                                  <div key={field.value} class="flex check-item item" data-field={field.value} onmouseleave={handleHoverOut} onmouseover={handleHoverField} onclick={handleFieldClick}>
-                                      <lightning-icon icon-name={field.iconName} alternative-text="Field type" size="x-small"></lightning-icon>
-                                      <span>{field.label}</span>
-                                  </div>
-                              </template>
+                <div class="slds-border_top border bg-secondary">
+                    <div class="slds-p-vertical_x-small slds-p-horizontal_medium">
+                        <!-- TODO: provide onclicks -->
+                        <lightning-breadcrumbs>
+                            <lightning-breadcrumb label={baseObject} name={baseObject}> </lightning-breadcrumb>
+                            <template for:each={lookupStack} for:item="lookup">
+                                <lightning-breadcrumb key={lookup.relationshipName} label={lookup.objectApiName} name={lookup.objectApiName}> </lightning-breadcrumb>
+                            </template>
+                        </lightning-breadcrumbs>
+                    </div>
 
-                              <template if:false={filteredFields.length}>
-                                  <p>No fields available.</p>
-                              </template>
-                          </section>
-                      </div>
-                  </div>
+                    <div class="slds-text-body_regular slds-text-color_weak slds-p-vertical_x-small slds-p-horizontal_medium slds-border_top">
+                        <p class="slds-m-bottom_xx-small"><strong>API Name: </strong> <span>{hoveredFieldApiName}</span></p>
+                        <p style="line-height: 25px"><strong>Selected Field: </strong><span class="slds-badge">{selectedFieldPath}</span></p>
+                    </div>
+                </div>
 
-                  <div if:true={baseObject} class="api-name-section slds-text-body_regular slds-text-color_weak">
-                      <p class="slds-m-bottom_xx-small"><strong>API Name: </strong> <span>{hoveredField}</span></p>
-                      <p><strong>Selected Field: </strong><span class="slds-badge">{currentRelationshipPath}</span></p>
-                  </p>
-                  </div>
+                <!-- Footer buttons -->
+                <footer class="slds-modal__footer">
+                    <lightning-layout>
+                        <lightning-layout-item flexibility="auto" class="slds-text-align_left">
+                            <lightning-button icon-name="utility:close" variant="neutral" label="Close" onclick={handleCloseModal} class="slds-m-right_x-small"></lightning-button>
+                        </lightning-layout-item>
 
-                  <footer class="slds-modal__footer">
-                      <lightning-button variant="neutral" label="Close" onclick={handleCloseModal} class="slds-m-right_x-small"></lightning-button>
-                      <lightning-button variant="brand" label="Select" onclick={handleFieldSelect} disabled={isSelectDisabled}></lightning-button>
-                  </footer>
-              </div>
-          </div>
-      </section>
-      <div class="slds-backdrop slds-backdrop_open" style="width: 100vw;left: calc(-50vw + 50%);"></div>
-  </template>
+                        <lightning-layout-item flexibility="auto" class="slds-text-align_right">
+                            <lightning-button
+                                icon-name="utility:back"
+                                variant="neutral"
+                                label="Back"
+                                onclick={handleBack}
+                                disabled={isBackDisabled}
+                                class="slds-m-left_x-small"
+                            ></lightning-button>
+
+                            <lightning-button
+                                icon-name="utility:check"
+                                variant="brand"
+                                label="Select"
+                                onclick={handleSelect}
+                                disabled={isSelectDisabled}
+                                class="slds-m-left_x-small"
+                            ></lightning-button>
+                        </lightning-layout-item>
+                    </lightning-layout>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
 </template>

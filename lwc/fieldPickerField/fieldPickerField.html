@@ -1,0 +1,25 @@
+<template>
+    <span class="slds-nav-vertical__item" onmouseover={handleFieldHover} onmouseout={handleFieldMouseOut}>
+        <input type="radio" id={field.value} value={field.value} name="field-group" checked="" />
+        <label class="slds-nav-vertical__action regular-padding" for={field.value}>
+            <lightning-icon class="slds-var-m-right_x-small" icon-name={field.iconName} size="x-small" alternative-text="Field Type"></lightning-icon>
+            <span class="slds-nav-vertical_radio-faux slds-truncate">{field.label}</span>
+        </label>
+
+        <template lwc:if={actions.length}>
+            <div class="actions">
+                <template for:each={actions} for:item="action">
+                    <lightning-button-icon
+                        key={action.name}
+                        class="action slds-var-m-left_x-small"
+                        icon-name={action.icon}
+                        size="small"
+                        alternative-text={action.title}
+                        data-name={action.name}
+                        onclick={handleActionClick}
+                    ></lightning-button-icon>
+                </template>
+            </div>
+        </template>
+    </span>
+</template>
