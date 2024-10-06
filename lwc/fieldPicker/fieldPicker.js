@@ -46,6 +46,8 @@ export default class FieldPicker extends LightningElement {
     /** Filter regular fields. If provided, initial field is applied */
     @api fieldTypeFilter = INITIAL_FILTER;
 
+    @api sortOption = { sortBy: "Field", dir: "ASC" };
+
     /** @type {number} Determines the maximum depth of field selection.
      * If depth=1, then user can select a field on base object only: Field_A__c.
      * If depth=2, then user can select a field on base object or in child record: Field_B__r.Field_A__c.
@@ -127,12 +129,13 @@ export default class FieldPicker extends LightningElement {
     handleFilterSelect(event) {
         /** @type {string|null} - one of SF field types (e.g. 'BOOLEAN', 'CURRENCY', ...). null if filter is not selected  */
         const filter = event.detail;
-        // TODO: implement filtering
+        this.fieldTypeFilter = filter;
     }
 
     handleSortChange(event) {
         /** @type {SortValue} - object of type {sortBy: 'Field' | 'Type', dir: 'ASC' | 'DESC'}. Cannot be null  */
         const sort = event.detail;
+        this.sortOption = sort;
         // TODO: implement sorting
     }
 
@@ -228,6 +231,41 @@ export default class FieldPicker extends LightningElement {
             this.loadFields(objectApiName);
             this.selectedField = null;
         }
+    }
+
+    get displayedRegularFields() {
+        let fields = [...this.regularFields];
+
+        if (this.fieldTypeFilter) {
+            fields = fields.filter((field) => field.type === this.fieldTypeFilter);
+        }
+
+        if (this.searchTerm) {
+            const searchTermLower = this.searchTerm.toLowerCase();
+            fields = fields.filter((field) => field.label.toLowerCase().includes(searchTermLower) || field.apiName.toLowerCase().includes(searchTermLower));
+        }
+
+        if (this.sortOption) {
+            fields.sort((a, b) => {
+                let valueA, valueB;
+                if (this.sortOption.sortBy === "Field") {
+                    valueA = a.label.toLowerCase();
+                    valueB = b.label.toLowerCase();
+                } else if (this.sortOption.sortBy === "Type") {
+                    valueA = a.type.toLowerCase();
+                    valueB = b.type.toLowerCase();
+                }
+                if (valueA < valueB) {
+                    return this.sortOption.dir === "ASC" ? -1 : 1;
+                } else if (valueA > valueB) {
+                    return this.sortOption.dir === "ASC" ? 1 : -1;
+                } else {
+                    return 0;
+                }
+            });
+        }
+
+        return fields;
     }
 
     get isBackDisabled() {

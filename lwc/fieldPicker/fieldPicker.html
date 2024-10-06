@@ -69,16 +69,14 @@
 
                             <div class="slds-nav-vertical__section scrollable_y height-fields">
                                 <fieldset aria-describedby="fields" class="slds-nav-vertical">
-                                    <template if:true={hasRegularFields}>
-                                        <template for:each={regularFields} for:item="field">
-                                            <c-field-picker-field
-                                                key={field.apiName}
-                                                field={field}
-                                                onfieldmouseover={handleFieldHover}
-                                                onfieldmouseout={handleFieldMouseOut}
-                                                onfieldclick={handleFieldClick}
-                                            ></c-field-picker-field>
-                                        </template>
+                                    <template for:each={displayedRegularFields} for:item="field">
+                                        <c-field-picker-field
+                                            key={field.apiName}
+                                            field={field}
+                                            onfieldmouseover={handleFieldHover}
+                                            onfieldmouseout={handleFieldMouseOut}
+                                            onfieldclick={handleFieldClick}
+                                        ></c-field-picker-field>
                                     </template>
                                 </fieldset>
                             </div>
