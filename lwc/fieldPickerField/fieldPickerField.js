@@ -3,8 +3,13 @@ import { LightningElement, api } from "lwc";
 export default class FieldPickerField extends LightningElement {
     //TODO: /** @type {Field} */
     @api field;
-    @api additionalClass = "";
+    @api isDisabled = false;
+    @api actionsDisabled = false;
     @api actions = [];
+
+    get actionsVisible() {
+        return this.actions.length && !this.actionsDisabled;
+    }
 
     handleFieldHover() {
         this.dispatchEvent(new CustomEvent("fieldmouseover", { detail: this.field.apiName }));

@@ -19,7 +19,7 @@
                 <template for:each={computedSortOptions} for:item="sortOption">
                     <li
                         lwc:if={sortOption.isOption}
-                        key={sortOption.label}
+                        key={sortOption.id}
                         class={sortOption.itemClass}
                         role="menuitem"
                         data-id={sortOption.id}
@@ -41,9 +41,10 @@
                             <lightning-icon class="slds-m-left_x-small" icon-name={sortOption.icon} size="x-small" alternative-text={sortOption.label}></lightning-icon>
                         </a>
                     </li>
-                    <li lwc:else key={sortOption.label} tabindex="-1" class="slds-dropdown__header slds-truncate" title={sortOption.label} role="presentation">
+                    <li lwc:else key={sortOption.id} tabindex="-1" class="slds-dropdown__header slds-truncate" title={sortOption.label} role="presentation">
                         <span>{sortOption.label}</span>
                     </li>
+                    <li lwc:if={sortOption.showDivider} key={sortOption.label} class="slds-has-divider_top-space" role="separator"></li>
                 </template>
             </ul>
         </div>

@@ -6,11 +6,12 @@
 
 /**
  * @typedef {Object} SortOption
- * @property {string} id - Unique id.
- * @property {SortValue} value - The sort value.
+ * @property {string|null} id - Unique id.
+ * @property {SortValue|null} value - The sort value.
  * @property {string} label - The display label of the sort option.
  * @property {string} icon - The utility icon name.
  * @property {boolean} isOption - Determines whether the item is an option.
+ * @property {boolean|undefined} showDivider - Determines if the divider should appear after this option.
  */
 
 /**
@@ -36,17 +37,19 @@ export function prepareSortOptions(options, selectedId) {
 
 /** @type {SortOption[]} */
 export const SORT_OPTIONS = [
+    { id: "Not Sorted", value: null, label: "Not Sorted", icon: "utility:sort", isOption: true, showDivider: true },
     { label: "Field" },
     { id: "Field - ASC", value: { sortBy: "Field", dir: "ASC" }, label: "Field - A to Z", icon: "utility:arrowup", isOption: true },
-    { id: "Field - DESC", value: { sortBy: "Field", dir: "DESC" }, label: "Field - Z to A", icon: "utility:arrowdown", isOption: true },
+    { id: "Field - DESC", value: { sortBy: "Field", dir: "DESC" }, label: "Field - Z to A", icon: "utility:arrowdown", isOption: true, showDivider: true },
     { label: "Type" },
     { id: "Type - ASC", value: { sortBy: "Type", dir: "ASC" }, label: "Type - A to Z", icon: "utility:arrowup", isOption: true },
     { id: "Type - DESC", value: { sortBy: "Type", dir: "DESC" }, label: "Type - Z to A", icon: "utility:arrowdown", isOption: true }
 ];
 
 /** @type {SortOption} */
-export const INITIAL_SORT = SORT_OPTIONS[1];
+export const INITIAL_SORT = SORT_OPTIONS[0];
 
 export const EVENT = {
+    VALIDATION_ERROR: "validationerror",
     CHANGE: "sortchange"
 };

@@ -29,12 +29,52 @@ import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
 
 const BTN_LABEL = "Select a Field";
 const INITIAL_FILTER = "BOOLEAN";
-const MAXIMUM_DEPTH = 3;
+const MAXIMUM_DEPTH = 2;
 
 const INITIAL_BASE_OBJECT = "Account";
 // TODO: add depth validation
 
 const IS_DEBUG = true; //TODO: remove in prod
+
+/**
+ * @param {Field} field
+ * @param {LookupStack} lookupStack
+ * @returns {SelectedField}
+ */
+const fieldWithRelationshipPath = (field, lookupStack) => {
+    return { ...field, relationshipPath: buildRelationshipPath(field.apiName, lookupStack) };
+};
+
+//TODO LookupStack type
+
+/**
+ * @param {string} fieldApiName
+ * @param {LookupStack} lookupStack
+ * @returns {string}
+ * */
+const buildRelationshipPath = (fieldApiName = "", lookupStack) => {
+    return [...lookupStack.map((lookup) => lookup.relationshipName), fieldApiName].join(".");
+};
+
+/**
+ * @param {Field} a
+ * @param {Field} b
+ * @param {SortValue} fieldSort
+ * @returns {0|1|-1}
+ * */
+const compareFields = (a, b, fieldSort) => {
+    const getValue = (field) => {
+        const sortByMapping = {
+            Field: () => field.label.toLowerCase(),
+            Type: () => field.type.toLowerCase()
+        };
+        return sortByMapping[fieldSort.sortBy]?.() ?? "";
+    };
+
+    const valueA = getValue(a);
+    const valueB = getValue(b);
+    return valueA === valueB ? 0 : (valueA < valueB ? -1 : 1) * (fieldSort.dir === "ASC" ? 1 : -1);
+};
 
 export default class FieldPicker extends LightningElement {
     /** The label of "Select Field" button */
@@ -46,12 +86,12 @@ export default class FieldPicker extends LightningElement {
     /** Filter regular fields. If provided, initial field is applied */
     @api fieldTypeFilter = INITIAL_FILTER;
 
-    @api sortOption = { sortBy: "Field", dir: "ASC" };
+    @api fieldSort = null;
 
     /** @type {number} Determines the maximum depth of field selection.
-     * If depth=1, then user can select a field on base object only: Field_A__c.
-     * If depth=2, then user can select a field on base object or in child record: Field_B__r.Field_A__c.
-     * If depth=3, then user can select a field on base object or in child record or in child of child: Field_B__r.Field_C__r.Field_A__c.
+     * If depth=0, then user can select a field on base object only: Field_A__c.
+     * If depth=1, then user can select a field on base object or in child record: Field_B__r.Field_A__c.
+     * If depth=2, then user can select a field on base object or in child record or in child of child: Field_B__r.Field_C__r.Field_A__c.
      * And so on
      */
     @api depth = MAXIMUM_DEPTH;
@@ -65,8 +105,11 @@ export default class FieldPicker extends LightningElement {
     /** @type {Field[]} First column. List of lookup fields for the current object */
     @track lookupFields = [];
 
-    /** @type {Field[]} Second column. List of regular fields for the current object */
+    /** @type {Field[]} List of regular fields for the current object */
     @track regularFields = [];
+
+    /** @type {Field[]} Second column. List of filtered regular fields for the current object */
+    @track displayedRegularFields = [];
 
     /** @type {LookupStack} Stores the path to the current object. if the depth > 1, then new entry is added when user goes deeper to child object. */
     @track lookupStack = [];
@@ -75,7 +118,7 @@ export default class FieldPicker extends LightningElement {
     @track selectedField = null;
 
     /** @type {string} API Name of the currently hovered field */
-    @track hoveredFieldApiName = "";
+    hoveredFieldApiName = "";
 
     /** @type {string} User's input to searchbar */
     @track searchTerm = "";
@@ -86,7 +129,7 @@ export default class FieldPicker extends LightningElement {
     @track isModalOpen = false;
     @track isLoading = false;
 
-    @track allowLookupSelection = true; //TODO: this should be converted to @api for prod. Currently @track for testing
+    @track allowLookupSelection = false; //TODO: this should be converted to @api for prod. Currently @track for testing
 
     /** Adds "Go Deeper" button for lookup field */
     lookupFieldActions = LOOKUP_ACTIONS;
@@ -117,12 +160,12 @@ export default class FieldPicker extends LightningElement {
     }
 
     handleSearchChange(event) {
-        this.searchTerm = event.target.value.toLowerCase().trim();
-        // TODO: implement searching
+        this.searchTerm = event.target.value.toLowerCase();
+        this.applyFilters();
     }
 
     /** Executes if Filter component receives invalid initial filter (fieldTypeFilter) */
-    handleFilterValidationError(event) {
+    handleValidationError(event) {
         this.handleError(event.detail);
     }
 
@@ -130,13 +173,14 @@ export default class FieldPicker extends LightningElement {
         /** @type {string|null} - one of SF field types (e.g. 'BOOLEAN', 'CURRENCY', ...). null if filter is not selected  */
         const filter = event.detail;
         this.fieldTypeFilter = filter;
+        this.applyFilters();
     }
 
     handleSortChange(event) {
-        /** @type {SortValue} - object of type {sortBy: 'Field' | 'Type', dir: 'ASC' | 'DESC'}. Cannot be null  */
+        /** @type {SortValue | null} */
         const sort = event.detail;
-        this.sortOption = sort;
-        // TODO: implement sorting
+        this.fieldSort = sort;
+        this.applyFilters();
     }
 
     handleOpenModal() {
@@ -158,9 +202,16 @@ export default class FieldPicker extends LightningElement {
                 ...field,
                 icon: getFieldTypeIcon(field.type)
             }));
-            this.lookupFields = allFieldOptions.filter((field) => Boolean(field.referenceTo));
-            this.regularFields = allFieldOptions.filter((field) => !field.referenceTo);
-            this.filterOptions = getAvailableFilters(this.regularFields, this.allowedFieldTypes);
+
+            const fieldGroups = allFieldOptions.reduce((acc, field) => (acc[field.referenceTo ? "lookupFields" : "regularFields"].push(field), acc), {
+                lookupFields: [],
+                regularFields: []
+            });
+
+            this.lookupFields = fieldGroups.lookupFields;
+            this.regularFields = fieldGroups.regularFields;
+            this.filterOptions = getAvailableFilters(fieldGroups.regularFields, this.allowedFieldTypes);
+            this.applyFilters();
         } catch (error) {
             this.handleError(error);
         } finally {
@@ -180,9 +231,8 @@ export default class FieldPicker extends LightningElement {
         /** @type {Field} */
         const field = event.detail;
 
-        if (this.lookupStack.length >= this.depth - 1) {
-            console.warn("Max allowed depth is ", this.depth);
-            return;
+        if (this.isMaximumDepth) {
+            return console.warn("Max allowed depth is ", this.depth);
         }
         this.lookupStack.push({
             relationshipName: field.relationshipName,
@@ -195,29 +245,9 @@ export default class FieldPicker extends LightningElement {
     handleFieldClick(event) {
         /** @type {Field} */
         const field = event.detail;
-        if (field.referenceTo) {
-            if (this.allowLookupSelection) {
-                this.selectedField = this.fieldWithRelationshipPath(field);
-            }
-        } else {
-            this.selectedField = this.fieldWithRelationshipPath(field);
+        if (!field.referenceTo || this.allowLookupSelection) {
+            this.selectedField = fieldWithRelationshipPath(field, this.lookupFields);
         }
-    }
-
-    /**
-     * @param {Field} field
-     * @returns {SelectedField}
-     */
-    fieldWithRelationshipPath(field) {
-        return { ...field, relationshipPath: this.buildRelationshipPath(field.apiName) };
-    }
-
-    buildRelationshipPath(fieldApiName = "") {
-        const relationshipNames = this.lookupStack.map((lookup) => lookup.relationshipName);
-        if (fieldApiName) {
-            relationshipNames.push(fieldApiName);
-        }
-        return relationshipNames.join(".");
     }
 
     handleSelect() {
@@ -233,67 +263,59 @@ export default class FieldPicker extends LightningElement {
         }
     }
 
-    get displayedRegularFields() {
+    applyFilters() {
         let fields = [...this.regularFields];
 
-        if (this.fieldTypeFilter) {
-            fields = fields.filter((field) => field.type === this.fieldTypeFilter);
-        }
+        fields = this.applyFieldTypeFilter(fields);
+        fields = this.applySearchFilter(fields);
+        fields = this.applySort(fields);
 
-        if (this.searchTerm) {
-            const searchTermLower = this.searchTerm.toLowerCase();
-            fields = fields.filter((field) => field.label.toLowerCase().includes(searchTermLower) || field.apiName.toLowerCase().includes(searchTermLower));
-        }
+        this.displayedRegularFields = fields;
+    }
 
-        if (this.sortOption) {
-            fields.sort((a, b) => {
-                let valueA, valueB;
-                if (this.sortOption.sortBy === "Field") {
-                    valueA = a.label.toLowerCase();
-                    valueB = b.label.toLowerCase();
-                } else if (this.sortOption.sortBy === "Type") {
-                    valueA = a.type.toLowerCase();
-                    valueB = b.type.toLowerCase();
-                }
-                if (valueA < valueB) {
-                    return this.sortOption.dir === "ASC" ? -1 : 1;
-                } else if (valueA > valueB) {
-                    return this.sortOption.dir === "ASC" ? 1 : -1;
-                } else {
-                    return 0;
-                }
-            });
+    /** @param {Field[]} fields */
+    applyFieldTypeFilter(fields) {
+        if (!this.fieldTypeFilter) {
+            return fields;
         }
+        return fields.filter((field) => field.type === this.fieldTypeFilter);
+    }
 
-        return fields;
+    /** @param {Field[]} fields */
+    applySearchFilter(fields) {
+        if (!this.searchTerm) {
+            return fields;
+        }
+        const searchTermLower = this.searchTerm.toLowerCase();
+        return fields.filter((field) => field.label.toLowerCase().includes(searchTermLower) || field.apiName.toLowerCase().includes(searchTermLower));
+    }
+
+    /** @param {Field[]} fields */
+    applySort(fields) {
+        if (!this.fieldSort) {
+            return fields;
+        }
+        return fields.sort((a, b) => compareFields(a, b, this.fieldSort));
     }
 
     get isBackDisabled() {
-        return this.lookupStack.length === 0;
+        return !this.lookupStack.length;
     }
 
     get isSelectDisabled() {
         return !this.selectedField;
     }
 
-    get isGoDeeperVisible() {
-        return this.allowLookupSelection;
+    get isLookupDisabled() {
+        return !this.allowLookupSelection;
     }
 
-    get isGoDeeperDisabled() {
-        return !this.selectedField || this.selectedField.fieldType !== "REFERENCE" || this.lookupStack.length >= this.depth - 1;
+    get isMaximumDepth() {
+        return this.lookupStack.length >= this.depth;
     }
 
     get selectedFieldPath() {
         return this.selectedField ? this.selectedField.relationshipPath : "";
-    }
-
-    get hasLookupFields() {
-        return this.lookupFields.length > 0;
-    }
-
-    get hasRegularFields() {
-        return this.regularFields.length > 0;
     }
 
     resetSelection() {

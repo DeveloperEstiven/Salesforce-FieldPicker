@@ -1,12 +1,12 @@
 <template>
     <span class="slds-nav-vertical__item" onmouseover={handleFieldHover} onmouseout={handleFieldMouseOut}>
-        <input type="radio" id={field.apiName} value={field.apiName} name="field-group" checked="" />
+        <input type="radio" id={field.apiName} value={field.apiName} name="field-group" checked="" disabled={isDisabled} />
         <label class="slds-nav-vertical__action regular-padding" for={field.apiName} onclick={handleFieldClick}>
             <lightning-icon class="slds-var-m-right_x-small" icon-name={field.icon} size="x-small" alternative-text="Field Type"></lightning-icon>
             <span class="slds-nav-vertical_radio-faux slds-truncate">{field.label}</span>
         </label>
 
-        <template lwc:if={actions.length}>
+        <template lwc:if={actionsVisible}>
             <div class="actions">
                 <template for:each={actions} for:item="action">
                     <lightning-button-icon

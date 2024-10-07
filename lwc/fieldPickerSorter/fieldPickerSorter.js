@@ -1,13 +1,29 @@
-import { LightningElement, track } from "lwc";
-import { prepareSortOptions, SORT_OPTIONS, INITIAL_SORT, EVENT } from "./utils";
+import { api, LightningElement, track } from "lwc";
+import { prepareSortOptions, SORT_OPTIONS, EVENT, INITIAL_SORT } from "./utils";
 /** @typedef {import('./utils.js').SortOption} SortOption */
+/** @typedef {import('./utils.js').SortValue} SortValue */
 
 const OPEN_CLASS = "slds-is-open";
 
 export default class FieldPickerSorter extends LightningElement {
+    /** @type {SortValue} */
+    @api initialSort = null;
+    /** @type {SortValue} */
     @track selectedSortOption = INITIAL_SORT;
     @track isMenuOpen = false;
+    /** @type {SortOption[]} */
     sortOptions = SORT_OPTIONS;
+
+    connectedCallback() {
+        if (this.initialSort) {
+            const initialSortOption = this.sortOptions.find(s=>s.value?.sortBy === this.initialSort.sortBy && s.value?.dir === this.initialSort.dir);
+            if (!initialSortOption) {
+                const detail = `Invalid initial sort "${JSON.stringify(this.initialSort)}". The value should be one of the following options: ${this.sortOptions.filter(f=>Boolean(f.value)).map((f) => JSON.stringify(f.value)).join(", ")} or null`;
+                return this.dispatchEvent(new CustomEvent(EVENT.VALIDATION_ERROR, { detail }));
+            }
+            this.selectedSortOption = initialSortOption;
+        }
+    }
 
     toggleOpen() {
         this.isMenuOpen = !this.isMenuOpen;

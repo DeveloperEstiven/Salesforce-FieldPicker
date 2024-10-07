@@ -35,6 +35,8 @@
                                                 key={field.apiName}
                                                 field={field}
                                                 actions={lookupFieldActions}
+                                                is-disabled={isLookupDisabled}
+                                                actions-disabled={isMaximumDepth}
                                                 onfieldmouseover={handleFieldHover}
                                                 onfieldmouseout={handleFieldMouseOut}
                                                 onfieldclick={handleFieldClick}
@@ -56,14 +58,14 @@
                                     value={searchTerm}
                                     onchange={handleSearchChange}
                                 ></lightning-input>
-                                <c-field-picker-sorter onsortchange={handleSortChange}></c-field-picker-sorter>
+                                <c-field-picker-sorter initial-sort={fieldSort} onsortchange={handleSortChange} onvalidationerror={handleValidationError}></c-field-picker-sorter>
                                 <c-field-picker-filter
                                     lwc:if={filterOptions.length}
                                     is-disabled={isUserFilteringDisabled}
                                     initial-filter={fieldTypeFilter}
                                     filter-options={filterOptions}
                                     onfilterchange={handleFilterSelect}
-                                    onvalidationerror={handleFilterValidationError}
+                                    onvalidationerror={handleValidationError}
                                 ></c-field-picker-filter>
                             </div>
 
