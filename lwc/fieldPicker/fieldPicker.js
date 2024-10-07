@@ -29,7 +29,7 @@ import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
 
 const BTN_LABEL = "Select a Field";
 const INITIAL_FILTER = "BOOLEAN";
-const MAXIMUM_DEPTH = 2;
+const MAXIMUM_DEPTH = 5;
 
 const INITIAL_BASE_OBJECT = "Account";
 // TODO: add depth validation
@@ -254,13 +254,32 @@ export default class FieldPicker extends LightningElement {
         this.isModalOpen = false;
     }
 
-    handleBack() {
-        if (this.lookupStack.length > 0) {
-            this.lookupStack.pop();
-            const objectApiName = this.lookupStack.length > 0 ? this.lookupStack[this.lookupStack.length - 1].objectApiName : this.baseObject;
-            this.loadFields(objectApiName);
-            this.selectedField = null;
+    goToPreviousStackItem() {
+        this.goBackInStack(this.lookupStack.length - 2);
+    }
+
+    handleStackNavigation(event) {
+        const clickedIndex = Number(event.currentTarget.dataset.index);
+        this.goBackInStack(clickedIndex);
+    }
+
+    goBackInStack(index) {
+        this.selectedField = null;
+
+        if (index < -1 || index >= this.lookupStack.length) {
+            return console.warn(`Index ${index} is out of bounds:`, this.lookupStack);
         }
+
+        if (index === -1) {
+            this.lookupStack = [];
+            this.loadFields(this.baseObject);
+            return;
+        }
+
+        if (index === this.lookupStack.length - 1) return;
+
+        this.lookupStack = this.lookupStack.slice(0, index + 1);
+        this.loadFields(this.lookupStack.at(-1).objectApiName);
     }
 
     applyFilters() {

@@ -90,9 +90,16 @@
                     <div class="slds-p-vertical_x-small slds-p-horizontal_medium">
                         <!-- TODO: provide onclicks -->
                         <lightning-breadcrumbs>
-                            <lightning-breadcrumb label={baseObject} name={baseObject}> </lightning-breadcrumb>
-                            <template for:each={lookupStack} for:item="lookup">
-                                <lightning-breadcrumb key={lookup.relationshipName} label={lookup.objectApiName} name={lookup.objectApiName}> </lightning-breadcrumb>
+                            <lightning-breadcrumb label={baseObject} name={baseObject} data-index="-1" onclick={handleStackNavigation}> </lightning-breadcrumb>
+                            <template for:each={lookupStack} for:item="lookup" for:index="index">
+                                <lightning-breadcrumb
+                                    key={lookup.relationshipName}
+                                    label={lookup.objectApiName}
+                                    name={lookup.objectApiName}
+                                    data-index={index}
+                                    onclick={handleStackNavigation}
+                                >
+                                </lightning-breadcrumb>
                             </template>
                         </lightning-breadcrumbs>
                     </div>
@@ -115,7 +122,7 @@
                                 icon-name="utility:back"
                                 variant="neutral"
                                 label="Back"
-                                onclick={handleBack}
+                                onclick={goToPreviousStackItem}
                                 disabled={isBackDisabled}
                                 class="slds-m-left_x-small"
                             ></lightning-button>
