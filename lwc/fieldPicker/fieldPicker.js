@@ -45,7 +45,13 @@ const fieldWithRelationshipPath = (field, lookupStack) => {
     return { ...field, relationshipPath: buildRelationshipPath(field.apiName, lookupStack) };
 };
 
-//TODO LookupStack type
+// TODO LookupStack type
+// TODO: bug Created By id > Delegated approver Id > Select any field
+// disable go deeper for fields that doen't havve relationship path
+// TODO: initial state
+// TODO: interface to get field value
+// TODO: concatenation and formatting
+
 
 /**
  * @param {string} fieldApiName
@@ -102,6 +108,19 @@ export default class FieldPicker extends LightningElement {
     /** @type {boolean} If true, disables the Filter button. The initial filter will be applied, but user will not be able to change it */
     @api isUserFilteringDisabled = false;
 
+
+    /** @type {string} The valid Relationship API Name (e.g. Field_B__r.Field_C__r.Field_A__c) path to the initial selected field. If provided, then the component auto-initializes. */
+    @api initialFieldPath = "";
+
+    @api
+    get baseObject() {
+        return this._baseObject;
+    }
+    set baseObject(value) {
+        this._baseObject = typeof value !== "string" || !value.trim() ? INITIAL_BASE_OBJECT : value;
+        this.resetSelection();
+    }
+
     /** @type {Field[]} First column. List of lookup fields for the current object */
     @track lookupFields = [];
 
@@ -142,18 +161,6 @@ export default class FieldPicker extends LightningElement {
 
     /** @type {string} The  API Name of the current object. Changes when user walks through child lookups */
     @track currentObject = "";
-
-    /** @type {string} The valid Relationship API Name (e.g. Field_B__r.Field_C__r.Field_A__c) path to the initial selected field. If provided, then the component auto-initializes. */
-    @api initialFieldPath = "";
-
-    @api
-    get baseObject() {
-        return this._baseObject;
-    }
-    set baseObject(value) {
-        this._baseObject = typeof value !== "string" || !value.trim() ? INITIAL_BASE_OBJECT : value;
-        this.resetSelection();
-    }
 
     connectedCallback() {
         IS_DEBUG && setTimeout(() => this.handleOpenModal(), 1000); //! DEBUG ONLY
@@ -246,7 +253,7 @@ export default class FieldPicker extends LightningElement {
         /** @type {Field} */
         const field = event.detail;
         if (!field.referenceTo || this.allowLookupSelection) {
-            this.selectedField = fieldWithRelationshipPath(field, this.lookupFields);
+            this.selectedField = fieldWithRelationshipPath(field, this.lookupStack);
         }
     }
 

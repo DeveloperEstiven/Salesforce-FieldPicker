@@ -14,3 +14,7 @@
     visibility: visible;
     opacity: 1;
 }
+
+.regular-padding {
+    padding-left: 1rem;
+}
