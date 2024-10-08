@@ -34,7 +34,7 @@ const MAXIMUM_DEPTH = 5;
 const INITIAL_BASE_OBJECT = "Account";
 // TODO: add depth validation
 
-const IS_DEBUG = true; //TODO: remove in prod
+const IS_DEBUG = false; //TODO: remove in prod
 
 /**
  * @param {Field} field
@@ -51,7 +51,6 @@ const fieldWithRelationshipPath = (field, lookupStack) => {
 // TODO: initial state
 // TODO: interface to get field value
 // TODO: concatenation and formatting
-
 
 /**
  * @param {string} fieldApiName
@@ -90,7 +89,7 @@ export default class FieldPicker extends LightningElement {
     @api isBaseObjectHidden = false;
 
     /** Filter regular fields. If provided, initial field is applied */
-    @api fieldTypeFilter = INITIAL_FILTER;
+    @api fieldTypeFilter;
 
     @api fieldSort = null;
 
@@ -103,11 +102,10 @@ export default class FieldPicker extends LightningElement {
     @api depth = MAXIMUM_DEPTH;
 
     /** @type {string[]}. Determines the allowed field types for selection. For example [CURRENCY, BOOLEAN] means that user can select only Currency field or Checkbox */
-    @api allowedFieldTypes;
+    @api allowedFieldTypes = [];
 
     /** @type {boolean} If true, disables the Filter button. The initial filter will be applied, but user will not be able to change it */
     @api isUserFilteringDisabled = false;
-
 
     /** @type {string} The valid Relationship API Name (e.g. Field_B__r.Field_C__r.Field_A__c) path to the initial selected field. If provided, then the component auto-initializes. */
     @api initialFieldPath = "";
@@ -148,7 +146,7 @@ export default class FieldPicker extends LightningElement {
     @track isModalOpen = false;
     @track isLoading = false;
 
-    @track allowLookupSelection = false; //TODO: this should be converted to @api for prod. Currently @track for testing
+    @track allowLookupSelection = true; //TODO: this should be converted to @api for prod. Currently @track for testing
 
     /** Adds "Go Deeper" button for lookup field */
     lookupFieldActions = LOOKUP_ACTIONS;
@@ -220,7 +218,7 @@ export default class FieldPicker extends LightningElement {
             this.filterOptions = getAvailableFilters(fieldGroups.regularFields, this.allowedFieldTypes);
             this.applyFilters();
         } catch (error) {
-            this.handleError(error);
+            this.handleError("loadFields", error);
         } finally {
             this.isLoading = false;
         }
@@ -301,10 +299,13 @@ export default class FieldPicker extends LightningElement {
 
     /** @param {Field[]} fields */
     applyFieldTypeFilter(fields) {
-        if (!this.fieldTypeFilter) {
-            return fields;
+        if (this.fieldTypeFilter) {
+            return fields.filter((field) => field.type === this.fieldTypeFilter);
         }
-        return fields.filter((field) => field.type === this.fieldTypeFilter);
+        if (this.allowedFieldTypes?.length) {
+            return fields.filter((field) => this.allowedFieldTypes.includes(field.type));
+        }
+        return fields;
     }
 
     /** @param {Field[]} fields */
@@ -355,7 +356,7 @@ export default class FieldPicker extends LightningElement {
         this.isModalOpen = false;
     }
 
-    handleError(error) {
-        console.error("Error:", error);
+    handleError(methodName, error) {
+        console.error(`[fieldPicker] [${methodName}] Error:`, error);
     }
 }

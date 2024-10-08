@@ -24,6 +24,14 @@ export default class FieldPickerFilter extends LightningElement {
                 const detail = `Invalid initial filter "${this.initialFilter}". The value should be one of the following options: ${this.filterOptions.map((f) => f.value).join(", ")}`;
                 return this.dispatchEvent(new CustomEvent(EVENT.VALIDATION_ERROR, { detail }));
             }
+            if (initialFilterOption.isDisabled) {
+                console.warn(
+                    `Unexpected behavior. Provided initial filter "${this.initialFilter}" is disabled. Expected one of the following options: ${this.filterOptions
+                        .filter((f) => !f.isDisabled)
+                        .map((f) => f.value)
+                        .join(", ")}`
+                );
+            }
             this.selectedFilterOption = initialFilterOption;
         }
     }
