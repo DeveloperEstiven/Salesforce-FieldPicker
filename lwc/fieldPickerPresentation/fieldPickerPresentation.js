@@ -1,93 +1,107 @@
 import { LightningElement, track } from "lwc";
+import { ShowToastEvent } from "lightning/platformShowToastEvent";
+import getFieldPickerConfigs from "@salesforce/apex/FieldPickerConfigController.getFieldPickerConfigs";
+import getFieldPickerConfigById from "@salesforce/apex/FieldPickerConfigController.getFieldPickerConfigById";
+import deleteRecord from "@salesforce/apex/FieldPickerConfigController.deleteFieldPickerConfig";
+import { RefreshEvent } from "lightning/refresh";
 
 export default class FieldPickerPresentation extends LightningElement {
-    fieldPicker1 = null;
-    fieldPicker2 = null;
-    fieldPicker3 = null;
-    fieldPicker4 = null;
-    fieldPicker5 = null;
-    fieldPicker6 = null;
-    fieldPicker7 = null;
-    fieldPicker8 = null;
-    fieldPicker9 = null;
-    fieldPicker10 = null;
-    fieldPicker11 = null;
-    fieldPicker12 = null;
-    fieldPicker13 = null;
+    @track config = {};
+    @track configOptions = [];
+    @track selectedConfigId;
+    @track showFieldPicker = true;
+
+    fieldNames = ["Name", "selectButtonLabel__c", "allowedFieldTypes__c", "allowLookupSelection__c", "baseObject__c", "depth__c", "fieldSort__c", "fieldTypeFilter__c", "initialFieldPath__c", "isBaseObjectHidden__c", "isUserFilteringDisabled__c"];
 
     connectedCallback() {
-        this.fieldPicker1 = {
-            selectButtonLabel: "Hidden Base Object",
-            isBaseObjectHidden: true
-        };
+        this.loadConfigOptions();
+    }
 
-        this.fieldPicker2 = {
-            selectButtonLabel: "Visible Base Object",
-            isBaseObjectHidden: false
-        };
+    loadConfigOptions() {
+        getFieldPickerConfigs()
+            .then((configs) => {
+                this.configOptions = configs.map((config) => {
+                    return { label: config.Name, value: config.Id };
+                });
 
-        this.fieldPicker3 = {
-            selectButtonLabel: "Filtered PICKLISTS",
-            fieldTypeFilter: "PICKLIST"
-        };
+                if (configs.length > 0) {
+                    this.selectedConfigId = configs[0].Id;
+                    this.loadConfig(this.selectedConfigId);
+                } else {
+                    this.selectedConfigId = null;
+                    this.config = {};
+                    this.refreshFieldPicker();
+                }
+            })
+            .catch((error) => {
+                this.showToast("Error loading configurations", error.body.message, "error");
+            });
+    }
 
-        this.fieldPicker4 = {
-            selectButtonLabel: "Allowed types: BOOLEAN + STRING + CURRENCY",
-            allowedFieldTypes: ["BOOLEAN", "STRING", "CURRENCY"] //fixme
-        };
+    loadConfig(configId) {
+        getFieldPickerConfigById({ configId })
+            .then((config) => {
+                try {
+                    this.config = {
+                        ...config,
+                        fieldSort__c: config.fieldSort__c ? JSON.parse(config.fieldSort__c) : null,
+                        allowedFieldTypes__c: config.allowedFieldTypes__c ? config.allowedFieldTypes__c.split(";") : []
+                    };
+                } catch (error) {
+                    console.log("🟥 error:", error.message);
+                    console.log("🟥 config.fieldSort__c:", config.fieldSort__c);
+                    this.showToast("Error", JSON.stringify(error), "error");
+                    return;
+                }
 
-        this.fieldPicker5 = {
-            selectButtonLabel: "Filtering Disabled",
-            isUserFilteringDisabled: true
-        };
+                this.refreshFieldPicker();
+            })
+            .catch((error) => {
+                this.showToast("Error loading configuration", error.body.message, "error");
+            });
+    }
 
-        this.fieldPicker6 = {
-            selectButtonLabel: "BOOLEAN Filtered + Filtering Disabled",
-            isUserFilteringDisabled: true,
-            fieldTypeFilter: "BOOLEAN"
-        };
+    handleConfigChange(event) {
+        this.selectedConfigId = event.detail.value;
+        this.loadConfig(this.selectedConfigId);
+    }
 
-        this.fieldPicker7 = {
-            selectButtonLabel: "BOOLEAN Filtered + Allowed TYPE doesn't match",
-            isUserFilteringDisabled: false,
-            fieldTypeFilter: "BOOLEAN",
-            allowedFieldTypes: ["STRING", "CURRENCY"]
-        };
+    handleSaveSuccess() {
+        this.loadConfigOptions();
+        this.showToast("Success", "Configuration saved successfully", "success");
+        this.refreshFieldPicker();
+    }
 
-        this.fieldPicker8 = {
-            selectButtonLabel: "Contact Base Object", //fix
-            baseObject: "Contact"
-        };
+    handleDelete() {
+        deleteRecord({ configId: this.selectedConfigId })
+            .then(() => {
+                this.showToast("Success", "Configuration deleted successfully", "success");
+                this.selectedConfigId = null;
+                this.config = {};
+                this.loadConfigOptions();
+                this.refreshFieldPicker();
+            })
+            .catch((error) => {
+                this.showToast("Error deleting configuration", error.body.message, "error");
+            });
+    }
 
-        this.fieldPicker9 = {
-            selectButtonLabel: "Sorted by Field ASC",
-            fieldSort: { sortBy: "Field", dir: "ASC" }
-        };
+    handleCreateNew() {
+        this.selectedConfigId = null;
+        this.config = {};
+        this.refreshFieldPicker();
+    }
 
-        this.fieldPicker10 = {
-            selectButtonLabel: "Sorted by Type DESC",
-            fieldSort: { sortBy: "Type", dir: "DESC" }
-        };
+    refreshFieldPicker() {
+        this.dispatchEvent(new RefreshEvent());
+    }
 
-        this.fieldPicker11 = {
-            selectButtonLabel: "DEPTH = 3",
-            depth: 3
-        };
+    get label() {
+        return this.selectedConfigId ? "Update" : "Create";
+    }
 
-        this.fieldPicker12 = {
-            selectButtonLabel: "DEPTH = 0",
-            depth: 0
-        };
-
-        this.fieldPicker13 = {
-            selectButtonLabel: "RICH",
-            isBaseObjectHidden: true,
-            fieldTypeFilter: "STRING",
-            fieldSort: { sortBy: "Field", dir: "DESC" },
-            depth: 1,
-            allowedFieldTypes: ["STRING", "BOOLEAN"], //TODO: works without fieldTypeFilter?
-            isUserFilteringDisabled: true,
-            baseObject: "Lead"
-        };
+    showToast(title, message, variant) {
+        const evt = new ShowToastEvent({ title, message, variant });
+        this.dispatchEvent(evt);
     }
 }

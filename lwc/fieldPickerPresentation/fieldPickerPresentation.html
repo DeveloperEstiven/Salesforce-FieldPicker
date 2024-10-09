@@ -1,25 +1,42 @@
 <template>
-    <lightning-button label="show"></lightning-button>
-    <c-field-picker select-button-label={fieldPicker1.selectButtonLabel} is-base-object-hidden={fieldPicker1.isBaseObjectHidden}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker2.selectButtonLabel} is-base-object-hidden={fieldPicker2.isBaseObjectHidden}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker3.selectButtonLabel} field-type-filter={fieldPicker3.fieldTypeFilter}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker4.selectButtonLabel} allowed-field-types={fieldPicker4.allowedFieldTypes}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker5.selectButtonLabel} is-user-filtering-disabled={fieldPicker5.isUserFilteringDisabled}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker6.selectButtonLabel} field-type-filter={fieldPicker6.fieldTypeFilter} is-user-filtering-disabled={fieldPicker6.isUserFilteringDisabled}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker7.selectButtonLabel} allowed-field-types={fieldPicker7.allowedFieldTypes} field-type-filter={fieldPicker7.fieldTypeFilter} is-user-filtering-disabled={fieldPicker7.isUserFilteringDisabled}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker8.selectButtonLabel} allowed-field-types={fieldPicker8.allowedFieldTypes} base-object={fieldPicker8.baseObject}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker9.selectButtonLabel} field-sort={fieldPicker9.fieldSort}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker10.selectButtonLabel} field-sort={fieldPicker10.fieldSort}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker11.selectButtonLabel} depth={fieldPicker11.depth}></c-field-picker>
-    <c-field-picker select-button-label={fieldPicker12.selectButtonLabel} depth={fieldPicker12.depth}></c-field-picker>
-    <c-field-picker
-        select-button-label={fieldPicker13.selectButtonLabel}
-        is-base-object-hidden={fieldPicker13.isBaseObjectHidden}
-        field-type-filter={fieldPicker13.fieldTypeFilter}
-        field-sort={fieldPicker13.fieldSort}
-        allowed-field-types={fieldPicker13.allowedFieldTypes}
-        is-user-filtering-disabled={fieldPicker13.isUserFilteringDisabled}
-        base-object={fieldPicker13.baseObject}
-        depth={fieldPicker13.depth}
-    ></c-field-picker>
+    <div style="max-width: 65vw">
+        <lightning-card title="Field Picker Configuration" icon-name="utility:settings">
+            <div class="slds-p-around_medium">
+                <div class="slds-m-bottom_medium">
+                    <lightning-combobox label="Select Configuration" options={configOptions} value={selectedConfigId} onchange={handleConfigChange} class="slds-combobox_container"> </lightning-combobox>
+                </div>
+
+                <lightning-record-edit-form object-api-name="Field_Picker_Input_Config__c" record-id={selectedConfigId} density="compact" onsuccess={handleSaveSuccess}>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <template for:each={fieldNames} for:item="fieldName">
+                            <lightning-input-field key={fieldName} class="slds-col slds-size_1-of-2" field-name={fieldName}> </lightning-input-field>
+                        </template>
+                    </div>
+
+                    <div class="slds-m-top_medium">
+                        <lightning-button variant="brand" label={label} type="submit"></lightning-button>
+                        <template if:true={selectedConfigId}>
+                            <lightning-button label="Delete" onclick={handleDelete}></lightning-button>
+                            <lightning-button label="Create New Config" onclick={handleCreateNew}></lightning-button>
+                        </template>
+                    </div>
+                </lightning-record-edit-form>
+
+                <div class="slds-m-top_large">
+                    <c-field-picker
+                        lwc:if={showFieldPicker}
+                        select-button-label={config.selectButtonLabel__c}
+                        allowed-field-types={config.allowedFieldTypes__c}
+                        base-object={config.baseObject__c}
+                        depth={config.depth__c}
+                        field-sort={config.fieldSort__c}
+                        field-type-filter={config.fieldTypeFilter__c}
+                        is-base-object-hidden={config.isBaseObjectHidden__c}
+                        is-user-filtering-disabled={config.isUserFilteringDisabled__c}
+                    >
+                    </c-field-picker>
+                </div>
+            </div>
+        </lightning-card>
+    </div>
 </template>
