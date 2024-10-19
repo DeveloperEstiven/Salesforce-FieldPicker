@@ -32,7 +32,7 @@ const ALL_FILTERS = ALLOWED_FIELD_TYPES.map((key) => ({ label: key.replace(/_/g,
 /** @returns {FilterOption[]} */
 export const getAvailableFilters = (currentFields, allowedFieldTypes) => {
     const currentFieldTypes = new Set(currentFields.map((field) => field.type));
-    const allowedFieldTypesSet = new Set(allowedFieldTypes || ALLOWED_FIELD_TYPES);
+    const allowedFieldTypesSet = new Set(allowedFieldTypes?.length ? allowedFieldTypes : ALLOWED_FIELD_TYPES);
 
     const availableFilters = ALL_FILTERS.filter((filter) => currentFieldTypes.has(filter.value)).map((filter) => ({
         ...filter,

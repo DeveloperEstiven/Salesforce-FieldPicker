@@ -1,7 +1,7 @@
 public with sharing class FieldPickerConfigController {
     @AuraEnabled(cacheable=false)
     public static List<Field_Picker_Input_Config__c> getFieldPickerConfigs() {
-        return [SELECT Id, Name FROM Field_Picker_Input_Config__c ORDER BY CreatedDate DESC];
+        return [SELECT Id, Name FROM Field_Picker_Input_Config__c ORDER BY LastModifiedDate DESC];
     }
 
     @AuraEnabled(cacheable=false)

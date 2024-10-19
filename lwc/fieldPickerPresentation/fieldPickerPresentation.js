@@ -11,7 +11,18 @@ export default class FieldPickerPresentation extends LightningElement {
     @track selectedConfigId;
     @track showFieldPicker = true;
 
-    fieldNames = ["Name", "selectButtonLabel__c", "allowedFieldTypes__c", "allowLookupSelection__c", "baseObject__c", "depth__c", "fieldSort__c", "fieldTypeFilter__c", "initialFieldPath__c", "isBaseObjectHidden__c", "isUserFilteringDisabled__c"];
+    fieldNames = [
+        "Name",
+        "selectButtonLabel__c",
+        "allowedFieldTypes__c",
+        "baseObject__c",
+        "depth__c",
+        "fieldSort__c",
+        "fieldTypeFilter__c",
+        "initialFieldPath__c",
+        "isBaseObjectHidden__c",
+        "isUserFilteringDisabled__c"
+    ];
 
     connectedCallback() {
         this.loadConfigOptions();

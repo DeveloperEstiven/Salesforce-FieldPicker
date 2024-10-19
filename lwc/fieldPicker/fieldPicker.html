@@ -6,7 +6,7 @@
     </div>
 
     <template if:true={isModalOpen}>
-        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+        <section role="dialog" tabindex="-1" class={modalClass}>
             <div class="slds-modal__container">
                 <header class="slds-modal__header">
                     <h2 class="slds-text-heading_medium">{selectButtonLabel}</h2>
@@ -16,17 +16,21 @@
                     <lightning-spinner lwc:if={isLoading} alternative-text="Loading"></lightning-spinner>
 
                     <lightning-layout horizontal-align="space" class="slds-text-title_caps">
-                        <lightning-layout-item size="4" class="slds-border_right border slds-p-horizontal_medium slds-p-vertical_xx-small">
-                            <h4>Lookups</h4>
+                        <lightning-layout-item
+                            if:true={isLeftPanelVisible}
+                            size={sectionSize.lookup}
+                            class="slds-border_right border slds-p-horizontal_medium slds-p-vertical_xx-small"
+                        >
+                            <h4>{currentObject} Lookups</h4>
                         </lightning-layout-item>
 
-                        <lightning-layout-item size="8" class="slds-p-horizontal_medium slds-p-vertical_xx-small">
-                            <h4>{currentObject} Fields</h4>
+                        <lightning-layout-item if:true={isRightPanelVisible} size={sectionSize.fields} class="slds-p-horizontal_medium slds-p-vertical_xx-small">
+                            <h4>Fields</h4>
                         </lightning-layout-item>
                     </lightning-layout>
 
                     <lightning-layout horizontal-align="space" class="slds-border_top">
-                        <lightning-layout-item size="4" class="scrollable_y height slds-border_right border">
+                        <lightning-layout-item if:true={isLeftPanelVisible} size={sectionSize.lookup} class="scrollable_y height slds-border_right border">
                             <div class="slds-nav-vertical" aria-label="Lookup Fields">
                                 <div class="slds-nav-vertical__section">
                                     <fieldset aria-describedby="lookup-fields" class="slds-nav-vertical">
@@ -48,7 +52,7 @@
                             </div>
                         </lightning-layout-item>
 
-                        <lightning-layout-item size="8">
+                        <lightning-layout-item if:true={isRightPanelVisible} size={sectionSize.fields}>
                             <div class="slds-p-horizontal_medium slds-p-vertical_x-small slds-border_bottom flex">
                                 <lightning-input
                                     style="width: 100%"
@@ -88,7 +92,6 @@
 
                 <div class="slds-border_top border bg-secondary">
                     <div class="slds-p-vertical_x-small slds-p-horizontal_medium">
-                        <!-- TODO: provide onclicks -->
                         <lightning-breadcrumbs>
                             <lightning-breadcrumb label={baseObject} name={baseObject} data-index="-1" onclick={handleStackNavigation}> </lightning-breadcrumb>
                             <template for:each={lookupStack} for:item="lookup" for:index="index">

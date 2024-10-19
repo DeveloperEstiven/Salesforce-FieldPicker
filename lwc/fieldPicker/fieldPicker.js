@@ -29,7 +29,7 @@ import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
 
 const BTN_LABEL = "Select a Field";
 const INITIAL_FILTER = "BOOLEAN";
-const MAXIMUM_DEPTH = 5;
+const MAXIMUM_DEPTH = 3;
 
 const INITIAL_BASE_OBJECT = "Account";
 // TODO: add depth validation
@@ -81,6 +81,8 @@ const compareFields = (a, b, fieldSort) => {
     return valueA === valueB ? 0 : (valueA < valueB ? -1 : 1) * (fieldSort.dir === "ASC" ? 1 : -1);
 };
 
+const REFERENCE = "REFERENCE";
+
 export default class FieldPicker extends LightningElement {
     /** The label of "Select Field" button */
     @api selectButtonLabel = BTN_LABEL;
@@ -99,9 +101,30 @@ export default class FieldPicker extends LightningElement {
      * If depth=2, then user can select a field on base object or in child record or in child of child: Field_B__r.Field_C__r.Field_A__c.
      * And so on
      */
-    @api depth = MAXIMUM_DEPTH;
+    _depth = MAXIMUM_DEPTH;
 
-    /** @type {string[]}. Determines the allowed field types for selection. For example [CURRENCY, BOOLEAN] means that user can select only Currency field or Checkbox */
+    @api
+    set depth(value) {
+        if (value < 0) {
+            console.warn("depth cannot be less than 0");
+            this._depth = 0;
+        } else if (value > MAXIMUM_DEPTH) {
+            console.warn(`depth cannot be greater than ${MAXIMUM_DEPTH}`);
+            this._depth = MAXIMUM_DEPTH;
+        } else {
+            this._depth = value;
+        }
+    }
+
+    get depth() {
+        return this._depth;
+    }
+
+    /**
+     * @type {string[]}. Determines the allowed field types for selection. For example [CURRENCY, BOOLEAN] means that user can select only Currency field or Checkbox
+     * If not provided, any field type can be selected
+     * If REFERENCE provided, then user can select a lookup field from the left panel
+     */
     @api allowedFieldTypes = [];
 
     /** @type {boolean} If true, disables the Filter button. The initial filter will be applied, but user will not be able to change it */
@@ -138,15 +161,13 @@ export default class FieldPicker extends LightningElement {
     hoveredFieldApiName = "";
 
     /** @type {string} User's input to searchbar */
-    @track searchTerm = "";
+    searchTerm = "";
 
     /** @type {FilterOption[]} Array of available filters for current object. Computed based on all regularFields and allowedFieldTypes */
     @track filterOptions = [];
 
-    @track isModalOpen = false;
-    @track isLoading = false;
-
-    @track allowLookupSelection = true; //TODO: this should be converted to @api for prod. Currently @track for testing
+    isModalOpen = false;
+    isLoading = false;
 
     /** Adds "Go Deeper" button for lookup field */
     lookupFieldActions = LOOKUP_ACTIONS;
@@ -158,7 +179,7 @@ export default class FieldPicker extends LightningElement {
     _baseObject = INITIAL_BASE_OBJECT;
 
     /** @type {string} The  API Name of the current object. Changes when user walks through child lookups */
-    @track currentObject = "";
+    currentObject = "";
 
     connectedCallback() {
         IS_DEBUG && setTimeout(() => this.handleOpenModal(), 1000); //! DEBUG ONLY
@@ -215,7 +236,8 @@ export default class FieldPicker extends LightningElement {
 
             this.lookupFields = fieldGroups.lookupFields;
             this.regularFields = fieldGroups.regularFields;
-            this.filterOptions = getAvailableFilters(fieldGroups.regularFields, this.allowedFieldTypes);
+
+            this.filterOptions = getAvailableFilters(this.regularFields, this.allowedFieldTypes);
             this.applyFilters();
         } catch (error) {
             this.handleError("loadFields", error);
@@ -250,7 +272,7 @@ export default class FieldPicker extends LightningElement {
     handleFieldClick(event) {
         /** @type {Field} */
         const field = event.detail;
-        if (!field.referenceTo || this.allowLookupSelection) {
+        if (!field.referenceTo || this.isLookupSelectionAllowed) {
             this.selectedField = fieldWithRelationshipPath(field, this.lookupStack);
         }
     }
@@ -333,8 +355,53 @@ export default class FieldPicker extends LightningElement {
         return !this.selectedField;
     }
 
+    //new
+    get isLeftPanelVisible() {
+        return this.depth || this.isLookupSelectionAllowed;
+    }
+
+    get isRightPanelVisible() {
+        return true;
+    }
+
+    get isOneSectionVisible() {
+        return this.isLeftPanelVisible !== this.isRightPanelVisible;
+    }
+
+    get isLookupSelectionAllowed() {
+        return !this.allowedFieldTypes.length || this.allowedFieldTypes.includes(REFERENCE);
+    }
+
+    get modalClass() {
+        return `slds-modal slds-fade-in-open slds-modal_${this.isOneSectionVisible ? "small" : "medium"}`;
+    }
+
+    get sectionSize() {
+        if (this.isRightPanelVisible && this.isLeftPanelVisible) {
+            return {
+                lookup: 4,
+                fields: 8
+            };
+        }
+        if (this.isRightPanelVisible) {
+            return {
+                fields: 12
+            };
+        }
+        if (this.isLeftPanelVisible) {
+            return {
+                lookup: 12
+            };
+        }
+        return {
+            lookup: 6,
+            fields: 6
+        };
+    }
+    // \new
+
     get isLookupDisabled() {
-        return !this.allowLookupSelection;
+        return !this.isLookupSelectionAllowed;
     }
 
     get isMaximumDepth() {
