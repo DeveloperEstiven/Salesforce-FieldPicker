@@ -18,3 +18,7 @@
 .regular-padding {
     padding-left: 1rem;
 }
+
+.highlight {
+    background-color: yellow;
+}
