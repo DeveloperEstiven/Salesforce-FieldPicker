@@ -91,19 +91,7 @@
 
                 <div class="slds-border_top border bg-secondary">
                     <div class="slds-p-vertical_x-small slds-p-horizontal_medium">
-                        <lightning-breadcrumbs>
-                            <lightning-breadcrumb label={baseObject} name={baseObject} data-index="-1" onclick={handleStackNavigation}> </lightning-breadcrumb>
-                            <template for:each={lookupStack} for:item="lookup" for:index="index">
-                                <lightning-breadcrumb
-                                    key={lookup.relationshipName}
-                                    label={lookup.objectApiName}
-                                    name={lookup.objectApiName}
-                                    data-index={index}
-                                    onclick={handleStackNavigation}
-                                >
-                                </lightning-breadcrumb>
-                            </template>
-                        </lightning-breadcrumbs>
+                        <c-lookups-navigation onnavigation={handleNavigate} root-object={baseObject} lookup-stack={lookupStack} variant="breadcrumbs"></c-lookups-navigation>
                     </div>
 
                     <div class="slds-text-body_regular slds-text-color_weak slds-p-vertical_x-small slds-p-horizontal_medium slds-border_top">
@@ -120,14 +108,7 @@
                         </lightning-layout-item>
 
                         <lightning-layout-item flexibility="auto" class="slds-text-align_right">
-                            <lightning-button
-                                icon-name="utility:back"
-                                variant="neutral"
-                                label="Back"
-                                onclick={goToPreviousStackItem}
-                                disabled={isBackDisabled}
-                                class="slds-m-left_x-small"
-                            ></lightning-button>
+                            <c-lookups-navigation onnavigation={handleNavigate} root-object={baseObject} lookup-stack={lookupStack} variant="button"></c-lookups-navigation>
 
                             <lightning-button
                                 icon-name="utility:check"

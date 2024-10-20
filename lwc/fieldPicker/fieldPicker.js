@@ -28,7 +28,7 @@ import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
  */
 
 const BTN_LABEL = "Select a Field";
-const MAXIMUM_DEPTH = 3;
+const MAXIMUM_DEPTH = 2;
 
 const INITIAL_BASE_OBJECT = "Account";
 // TODO: add depth validation
@@ -258,10 +258,13 @@ export default class FieldPicker extends LightningElement {
         if (this.isMaximumDepth) {
             return console.warn("Max allowed depth is ", this.depth);
         }
-        this.lookupStack.push({
-            relationshipName: field.relationshipName,
-            objectApiName: field.referenceTo
-        });
+        this.lookupStack = [
+            ...this.lookupStack,
+            {
+                relationshipName: field.relationshipName,
+                objectApiName: field.referenceTo
+            }
+        ];
         this.selectedField = null;
         this.loadFields(field.referenceTo);
     }
@@ -278,32 +281,10 @@ export default class FieldPicker extends LightningElement {
         this.isModalOpen = false;
     }
 
-    goToPreviousStackItem() {
-        this.goBackInStack(this.lookupStack.length - 2);
-    }
-
-    handleStackNavigation(event) {
-        const clickedIndex = Number(event.currentTarget.dataset.index);
-        this.goBackInStack(clickedIndex);
-    }
-
-    goBackInStack(index) {
-        this.selectedField = null;
-
-        if (index < -1 || index >= this.lookupStack.length) {
-            return console.warn(`Index ${index} is out of bounds:`, this.lookupStack);
-        }
-
-        if (index === -1) {
-            this.lookupStack = [];
-            this.loadFields(this.baseObject);
-            return;
-        }
-
-        if (index === this.lookupStack.length - 1) return;
-
-        this.lookupStack = this.lookupStack.slice(0, index + 1);
-        this.loadFields(this.lookupStack.at(-1).objectApiName);
+    handleNavigate(event) {
+        const { objectApiName, lookupStack } = event.detail;
+        this.lookupStack = lookupStack;
+        this.loadFields(objectApiName);
     }
 
     applyFilters() {
@@ -342,10 +323,6 @@ export default class FieldPicker extends LightningElement {
             return fields;
         }
         return fields.sort((a, b) => compareFields(a, b, this.fieldSort));
-    }
-
-    get isBackDisabled() {
-        return !this.lookupStack.length;
     }
 
     get isSelectDisabled() {
@@ -410,6 +387,10 @@ export default class FieldPicker extends LightningElement {
     }
 
     get isFilteringDisabled() {
+        return this.isUserFilteringDisabled || !this.filterOptions.length;
+    }
+
+    get lookupBreadcrumbs() {
         return this.isUserFilteringDisabled || !this.filterOptions.length;
     }
 

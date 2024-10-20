@@ -1,0 +1,10 @@
+<template>
+    <ol class="breadcrumbs">
+        <li data-index="-1" class="breadcrumb" onclick={handleStackNavigation}>{rootObject}</li>
+
+        <template for:each={richLookupStack} for:item="lookup" for:index="index">
+            <li key={lookup.relationshipName} class="separator">/</li>
+            <li key={lookup.relationshipName} class="breadcrumb" data-index={index} onclick={handleStackNavigation}>{lookup.objectApiName}</li>
+        </template>
+    </ol>
+</template>
