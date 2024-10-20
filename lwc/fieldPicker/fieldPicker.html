@@ -64,9 +64,7 @@
                                 ></lightning-input>
                                 <c-field-picker-sorter initial-sort={fieldSort} onsortchange={handleSortChange} onvalidationerror={handleValidationError}></c-field-picker-sorter>
                                 <c-field-picker-filter
-                                    lwc:if={filterOptions.length}
-                                    is-disabled={isUserFilteringDisabled}
-                                    initial-filter={fieldTypeFilter}
+                                    is-disabled={isFilteringDisabled}
                                     filter-options={filterOptions}
                                     onfilterchange={handleFilterSelect}
                                     onvalidationerror={handleValidationError}

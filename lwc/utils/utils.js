@@ -1,0 +1,22 @@
+export const DISPLAY_TYPE_ICON_MAP = {
+    ADDRESS: "utility:checkin",
+    BOOLEAN: "utility:multi_select_checkbox",
+    CURRENCY: "utility:currency",
+    DATE: "utility:date_input",
+    DATETIME: "utility:date_time",
+    DOUBLE: "utility:number_input",
+    EMAIL: "utility:email",
+    ENCRYPTEDSTRING: "utility:lock",
+    ID: "utility:key",
+    INTEGER: "utility:number_input",
+    LOCATION: "utility:location",
+    MULTIPICKLIST: "utility:multi_picklist",
+    PERCENT: "utility:percent",
+    PHONE: "utility:call",
+    PICKLIST: "utility:picklist_choice",
+    REFERENCE: "utility:record_lookup",
+    STRING: "utility:text",
+    TEXTAREA: "utility:textarea",
+    TIME: "utility:clock",
+    URL: "utility:link"
+};

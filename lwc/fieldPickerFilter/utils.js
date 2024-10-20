@@ -1,48 +1,50 @@
-/**
- * Utility function to find a filter option by its value.
- * @param {FilterOption[]} options - The array of filter options.
- * @param {string} value - The value to search for.
- * @returns {FilterOption|null} The matching filter option or null if not found.
- */
-export function findFilterOption(options, value) {
-    return options.find((option) => option.value === value) || null;
-}
+// utils.js
+/** @typedef {import('./utils.js').FilterOption} FilterOption */
 
 /**
  * @typedef {Object} FilterOption
- * @property {string} label - The display label of the filter option.
- * @property {boolean} isDisabled
- * @property {string} value - The unique value of the filter option.
- * @property {string} icon - The icon name associated with the filter option.
+ * @property {string} label - Display label for the filter.
+ * @property {string} value - Unique value for the filter.
+ * @property {string} icon - Icon name for the filter.
+ * @property {boolean} isDisabled - Indicates if the filter is disabled.
+ * @property {boolean} isSelected - Indicates if the filter is selected.
+ * @property {string} itemClass - CSS classes for the filter item.
  */
 
 /**
- * @typedef {Object} RichFilterOption
- * @extends FilterOption
- * @property {string} itemClass - "slds-dropdown__item" class. Includes "slds-is-selected" if the item is selected. Includes "is-disabled" if disabled
- * @property {boolean} isSelected - Determines whether the item is selected.
- * @property {string} tabindex - -1 if the item is disabled. 0 if the item is enabled.
+ * Prepares filter options by setting the selection status.
+ * @param {FilterOption[]} filterOptions
+ * @param {string[]} selectedFilters
+ * @returns {FilterOption[]}
  */
-
-/**
- * Prepares filter options with additional computed properties.
- * @param {FilterOption[]} options - The list of filter options.
- * @param {string|null} selectedValue - The currently selected option's value.
- * @returns {RichFilterOption[]} The enriched list of filter options.
- */
-export function prepareFilterOptions(options, selectedValue) {
-    return options.map((option) => {
-        const isSelected = option.value === selectedValue;
-        const itemClass = ["slds-dropdown__item", isSelected && "slds-is-selected", option.isDisabled && "is-disabled"].filter(Boolean).join(" ");
-        return {
-            ...option,
-            itemClass,
-            isSelected,
-            tabindex: option.isDisabled ? "-1" : "0"
-        };
-    });
+export function prepareFilterOptions(filterOptions) {
+    return filterOptions
+        .map((option) => {
+            const isDisabled = option.isSelected ? false : option.isDisabled;
+            const itemClass = ["slds-dropdown__item", option.isSelected && "slds-is-selected", isDisabled && "is-disabled"].filter(Boolean).join(" ");
+            return {
+                ...option,
+                itemClass,
+                isDisabled,
+                tabindex: isDisabled ? "-1" : "0"
+            };
+        })
+        .sort((a, b) => Number(a.isDisabled) - Number(b.isDisabled));
 }
 
+/**
+ * Finds a filter option by value.
+ * @param {FilterOption[]} filterOptions
+ * @param {string} value
+ * @returns {FilterOption|null}
+ */
+export function findFilterOption(filterOptions, value) {
+    return filterOptions.find((option) => option.value === value) || null;
+}
+
+/**
+ * Event constants used in the component.
+ */
 export const EVENT = {
     VALIDATION_ERROR: "validationerror",
     CHANGE: "filterchange"

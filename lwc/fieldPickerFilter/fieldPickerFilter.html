@@ -14,18 +14,25 @@
         >
         </lightning-button-icon>
 
-        <template lwc:if={selectedFilterOption}>
+        <template lwc:if={isSelected}>
             <lightning-icon
                 class="slds-is-absolute"
                 style="bottom: -3px; left: -3px; pointer-events: none"
-                icon-name={selectedFilterOption.icon}
+                icon-name="utility:record"
                 size="xx-small"
-                title={selectedFilterOption.label}
+                title="Filter applied"
             ></lightning-icon>
         </template>
 
-        <div class="slds-dropdown-trigger slds-dropdown-trigger_click" lwc:ref="menuItems">
+        <div class={menuClasses}>
             <ul class="slds-dropdown slds-dropdown_right slds-dropdown_length-7 slds-dropdown_xx-small" role="menu" aria-label="Choose a Filter">
+                <li class={clearAllClass} role="menuitem" onclick={clearAll} aria-disabled={isNotSelected} tabindex="-1">
+                    <a lwc:ref="clearAll" role="menuitemcheckbox" tabindex={clearAllTabIndex}>
+                        <span class="slds-truncate" title="Clear all filters" style="text-transform: capitalize">Clear All</span>
+                        <lightning-icon class="slds-var-m-left_x-small" icon-name="utility:close" size="x-small" alternative-text="Clear all filters"></lightning-icon>
+                    </a>
+                </li>
+                <li class="slds-has-divider_top-space" role="separator"></li>
                 <template for:each={computedFilterOptions} for:item="filterOption">
                     <li
                         key={filterOption.value}
@@ -40,7 +47,7 @@
                         <a aria-checked={filterOption.isSelected} role="menuitemcheckbox" tabindex={filterOption.tabindex}>
                             <span class="slds-truncate" title={filterOption.value} style="text-transform: capitalize">
                                 <lightning-icon
-                                    lwc:if={selectedFilterOption}
+                                    lwc:if={filterOption.isSelected}
                                     class="slds-var-m-right_x-small slds-icon_selected"
                                     icon-name="utility:check"
                                     size="x-small"

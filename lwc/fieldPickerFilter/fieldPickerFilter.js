@@ -1,160 +1,145 @@
-import { api, LightningElement, track } from "lwc";
+import { api, LightningElement } from "lwc";
 import { findFilterOption, prepareFilterOptions, EVENT } from "./utils";
-/** @typedef {import('./utils.js').FilterOption} FilterOption */
 
 const OPEN_CLASS = "slds-is-open";
+
 export default class FieldPickerFilter extends LightningElement {
-    /** @type {FilterOption[]} */
-    @api filterOptions = [];
-
-    /** @type {string|null} - FilterOption.value */
-    @api initialFilter = null;
-
-    @api isDisabled;
-
-    /** @type {FilterOption|null} */
-    @track selectedFilterOption = null;
-
+    @api isDisabled = false;
     isMenuOpen = false;
-    isDisabledInternally = false;
 
-    connectedCallback() {
-        if (!this.filterOptions.length) {
-            console.warn("No filter options provided.");
-            this.isDisabledInternally = true;
-            return;
-        }
-
-        this.selectedFilterOption = this.checkIfOnlyOneFilterOptionEnabled();
-
-        if (this.initialFilter) {
-            if (this.selectedFilterOption && this.initialFilter !== this.selectedFilterOption.value) {
-                console.warn(`Provided initial filter "${this.initialFilter}" will be ignored since only one option is enabled: "${this.getValidFilterValuesText()}"`);
-                this.isDisabledInternally = true;
-                return;
-            }
-
-            const initialFilterOption = findFilterOption(this.filterOptions, this.initialFilter);
-            if (!initialFilterOption) {
-                const detail = `Invalid initial filter "${this.initialFilter}". The value should be one of the following options: ${this.filterOptions.map((f) => f.value).join(", ")}`;
-                this.dispatchEvent(new CustomEvent(EVENT.VALIDATION_ERROR, { detail }));
-                return;
-            }
-
-            if (initialFilterOption.isDisabled) {
-                if (this.filterOptions.every((fo) => fo.isDisabled)) {
-                    console.warn(`Unexpected behavior. All available filters are disabled: ${this.filterOptions.map((f) => f.value).join(", ")}`);
-                    this.isDisabledInternally = true;
-                    return;
-                }
-
-                console.warn(
-                    `Unexpected behavior. Provided initial filter "${this.initialFilter}" is disabled. Expected one of the following options: ${this.getValidFilterValuesText()}`
-                );
-                return;
-            }
-            this.selectedFilterOption = initialFilterOption;
-        }
-    }
-
-    getValidFilters() {
-        return this.filterOptions.filter((f) => !f.isDisabled);
-    }
-
-    getValidFilterValuesText() {
-        return this.getValidFilters()
-            .map((f) => f.value)
-            .join(", ");
-    }
-
-    checkIfOnlyOneFilterOptionEnabled() {
-        const validFilters = this.getValidFilters();
-        if (validFilters.length === 1) {
-            return validFilters[0];
-        }
-        return null;
-    }
+    @api filterOptions;
 
     toggleOpen() {
         this.isMenuOpen = !this.isMenuOpen;
-        this.refs.menuItems.classList.toggle(OPEN_CLASS);
     }
 
-    /** @param {PointerEvent} event */
     handleFilterSelect(event) {
         const filterValue = event.currentTarget.dataset.filter;
         this.selectFilter(filterValue);
     }
 
-    /** @param {string} filterValue */
+    clearAll() {
+        const updatedFilterOptions = this.filterOptions.map((option) => {
+            return { ...option, isSelected: false };
+        });
+
+        this.dispatchEvent(new CustomEvent(EVENT.CHANGE, { detail: updatedFilterOptions }));
+        this.toggleOpen();
+        this.focusMenuButton();
+    }
+
     selectFilter(filterValue) {
-        if (this.checkIfOnlyOneFilterOptionEnabled()) {
-            this.toggleOpen();
-            console.warn("Cannot deselect the only option");
+        const filterOption = findFilterOption(this.filterOptions, filterValue);
+        if (!filterOption) {
+            console.warn(`Filter "${filterValue}" is not a valid option.`);
+            return;
+        }
+        if (!filterOption.isSelected && filterOption.isDisabled) {
+            console.warn(`Filter "${filterValue}" is disabled and cannot be selected.`);
             return;
         }
 
-        const isAlreadySelected = this.selectedFilterOption?.value === filterValue;
-
-        if (isAlreadySelected) {
-            this.selectedFilterOption = null;
-        } else {
-            const filter = findFilterOption(this.filterOptions, filterValue);
-            if (filter.isDisabled) {
-                return;
+        // Toggle selection status
+        const updatedFilterOptions = this.filterOptions.map((option) => {
+            if (option.value === filterValue) {
+                return { ...option, isSelected: !option.isSelected };
             }
-            this.selectedFilterOption = filter;
+            return option;
+        });
+
+        // Dispatch event to notify parent about the updated filter options
+        this.dispatchEvent(new CustomEvent(EVENT.CHANGE, { detail: updatedFilterOptions }));
+
+        // Update internal state
+        this.filterOptions = updatedFilterOptions;
+    }
+
+    get isSelected() {
+        return this.filterOptions.some((f) => f.isSelected);
+    }
+
+    get isNotSelected() {
+        return !this.isSelected;
+    }
+
+    get clearAllClass() {
+        if (this.isNotSelected) {
+            return "slds-dropdown__item is-disabled";
+        }
+        return "slds-dropdown__item";
+    }
+    get clearAllTabIndex() {
+        if (this.isNotSelected) {
+            return "-1";
+        }
+        return "0";
+    }
+
+    /**
+     * Computes the filter options with selection status.
+     * @returns {FilterOption[]}
+     */
+    get computedFilterOptions() {
+        return prepareFilterOptions(this.filterOptions);
+    }
+
+    /**
+     * Determines if the button should be disabled.
+     * @returns {boolean}
+     */
+    get isButtonDisabled() {
+        return this.isDisabled;
+    }
+
+    /**
+     * Computes the CSS classes for the menu container.
+     * @returns {string}
+     */
+    get menuClasses() {
+        return `slds-dropdown-trigger slds-dropdown-trigger_click ${this.isMenuOpen ? OPEN_CLASS : ""}`;
+    }
+
+    /** @param {KeyboardEvent} event */
+    handleKeydown(event) {
+        if (!this.isMenuOpen) return;
+
+        switch (event.key) {
+            case "Enter":
+                this.handleEnterKey(event);
+                break;
+            case "Escape":
+                this.toggleOpen();
+                this.focusMenuButton();
+                break;
+        }
+    }
+
+    /** @param {KeyboardEvent} event */
+    handleEnterKey(event) {
+        const focusedElement = this.template.activeElement;
+        if (focusedElement === this.refs.menuButton) {
+            return;
         }
 
-        this.dispatchEvent(new CustomEvent(EVENT.CHANGE, { detail: this.selectedFilterOption?.value || null }));
-        this.toggleOpen();
+        event.stopPropagation();
+        event.preventDefault();
+
+        if (focusedElement === this.refs.clearAll) {
+            this.clearAll();
+            return;
+        }
+
+        const selectedFilterOption = focusedElement?.closest("li[data-filter]");
+        if (!selectedFilterOption) {
+            return;
+        }
+
+        /** @type {string} */
+        const filterValue = selectedFilterOption.dataset.filter;
+        this.selectFilter(filterValue);
     }
 
-    get computedFilterOptions() {
-        return prepareFilterOptions(this.filterOptions, this.selectedFilterOption?.value);
-    }
-
-    get isButtonDisabled() {
-        return this.isDisabled || this.isDisabledInternally;
+    focusMenuButton() {
+        this.refs.menuButton.focus();
     }
 }
-
-// /** @param {KeyboardEvent} event */
-// handleKeydown(event) {
-//     if (!this.isMenuOpen) return;
-
-//     switch (event.key) {
-//         case "Enter":
-//             this.handleEnterKey(event);
-//             this.focusMenuButton();
-//             break;
-//         case "Escape":
-//             this.toggleOpen();
-//             this.focusMenuButton();
-//             break;
-//     }
-// }
-
-// /** @param {KeyboardEvent} event */
-// handleEnterKey(event) {
-//     const focusedElement = this.template.activeElement;
-//     if (focusedElement === this.refs.menuButton) {
-//         return;
-//     }
-
-//     event.stopPropagation();
-//     event.preventDefault();
-
-//     const selectedFilterOption = focusedElement?.closest("li[data-filter]");
-//     if (!selectedFilterOption) {
-//         return;
-//     }
-
-//     /** @type {string} */
-//     const filterValue = selectedFilterOption.dataset.filter;
-//     this.selectFilter(filterValue);
-// }
-
-// focusMenuButton() {
-//     this.refs.menuButton.focus();
-// }

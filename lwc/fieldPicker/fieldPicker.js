@@ -28,7 +28,6 @@ import { getAvailableFilters, getFieldTypeIcon, LOOKUP_ACTIONS } from "./utils";
  */
 
 const BTN_LABEL = "Select a Field";
-const INITIAL_FILTER = "BOOLEAN";
 const MAXIMUM_DEPTH = 3;
 
 const INITIAL_BASE_OBJECT = "Account";
@@ -89,9 +88,6 @@ export default class FieldPicker extends LightningElement {
 
     /** Hides the Base Object from UI */
     @api isBaseObjectHidden = false;
-
-    /** Filter regular fields. If provided, initial field is applied */
-    @api fieldTypeFilter;
 
     @api fieldSort = null;
 
@@ -190,15 +186,16 @@ export default class FieldPicker extends LightningElement {
         this.applyFilters();
     }
 
-    /** Executes if Filter component receives invalid initial filter (fieldTypeFilter) */
+    /** Executes if Filter component receives invalid filter */
     handleValidationError(event) {
         this.handleError(event.detail);
     }
 
     handleFilterSelect(event) {
-        /** @type {string|null} - one of SF field types (e.g. 'BOOLEAN', 'CURRENCY', ...). null if filter is not selected  */
-        const filter = event.detail;
-        this.fieldTypeFilter = filter;
+        /** @type {FilterOption[]} - SF field types (e.g. 'BOOLEAN', 'CURRENCY', ...). [] if filter is not selected  */
+        const filterOptions = event.detail;
+        this.filterOptions = filterOptions;
+
         this.applyFilters();
     }
 
@@ -237,7 +234,7 @@ export default class FieldPicker extends LightningElement {
             this.lookupFields = fieldGroups.lookupFields;
             this.regularFields = fieldGroups.regularFields;
 
-            this.filterOptions = getAvailableFilters(this.regularFields, this.allowedFieldTypes);
+            this.filterOptions = getAvailableFilters(this.regularFields, this.allowedFieldTypes, this.filterOptions);
             this.applyFilters();
         } catch (error) {
             this.handleError("loadFields", error);
@@ -321,8 +318,8 @@ export default class FieldPicker extends LightningElement {
 
     /** @param {Field[]} fields */
     applyFieldTypeFilter(fields) {
-        if (this.fieldTypeFilter) {
-            return fields.filter((field) => field.type === this.fieldTypeFilter);
+        if (this.filterOptions.some((filterOption) => filterOption.isSelected)) {
+            return fields.filter((field) => this.filterOptions.some((filterOption) => filterOption.isSelected && filterOption.value === field.type));
         }
         if (this.allowedFieldTypes?.length) {
             return fields.filter((field) => this.allowedFieldTypes.includes(field.type));
@@ -410,6 +407,10 @@ export default class FieldPicker extends LightningElement {
 
     get selectedFieldPath() {
         return this.selectedField ? this.selectedField.relationshipPath : "";
+    }
+
+    get isFilteringDisabled() {
+        return this.isUserFilteringDisabled || !this.filterOptions.length;
     }
 
     resetSelection() {
