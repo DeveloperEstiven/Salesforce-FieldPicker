@@ -53,6 +53,7 @@
                         </lightning-layout-item>
 
                         <lightning-layout-item if:true={isRightPanelVisible} size={sectionSize.fields}>
+                            <!-- TODO: get height and pass down -->
                             <div class="slds-p-horizontal_medium slds-p-vertical_x-small slds-border_bottom flex">
                                 <lightning-input
                                     style="width: 100%"
@@ -71,20 +72,18 @@
                                 ></c-field-picker-filter>
                             </div>
 
-                            <div class="slds-nav-vertical__section scrollable_y height-fields">
-                                <fieldset aria-describedby="fields" class="slds-nav-vertical">
-                                    <template for:each={displayedRegularFields} for:item="field">
-                                        <c-field-picker-field
-                                            key={field.apiName}
-                                            field={field}
-                                            onfieldmouseover={handleFieldHover}
-                                            onfieldmouseout={handleFieldMouseOut}
-                                            onfieldclick={handleFieldClick}
-                                            search-term={searchTerm}
-                                        ></c-field-picker-field>
-                                    </template>
-                                </fieldset>
-                            </div>
+                            <c-virtual-view items={displayedRegularFields} onitemschange={handleVisibleItemsChange} view-height="376.5" item-height="37.5">
+                                <template for:each={visibleItems} for:item="field">
+                                    <c-field-picker-field
+                                        key={field.apiName}
+                                        field={field}
+                                        onfieldmouseover={handleFieldHover}
+                                        onfieldmouseout={handleFieldMouseOut}
+                                        onfieldclick={handleFieldClick}
+                                        search-term={searchTerm}
+                                    ></c-field-picker-field>
+                                </template>
+                            </c-virtual-view>
                         </lightning-layout-item>
                     </lightning-layout>
                 </div>

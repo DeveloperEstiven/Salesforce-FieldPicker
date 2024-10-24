@@ -81,6 +81,7 @@ const compareFields = (a, b, fieldSort) => {
 };
 
 const REFERENCE = "REFERENCE";
+const DEBOUNCE = 500;
 
 export default class FieldPicker extends LightningElement {
     /** The label of "Select Field" button */
@@ -159,6 +160,14 @@ export default class FieldPicker extends LightningElement {
     /** @type {string} User's input to searchbar */
     searchTerm = "";
 
+    debounceTimer;
+
+    @track visibleItems = [];
+
+    handleVisibleItemsChange(event) {
+        this.visibleItems = event.detail;
+    }
+
     /** @type {FilterOption[]} Array of available filters for current object. Computed based on all regularFields and allowedFieldTypes */
     @track filterOptions = [];
 
@@ -182,8 +191,12 @@ export default class FieldPicker extends LightningElement {
     }
 
     handleSearchChange(event) {
+        clearTimeout(this.debounceTimer);
         this.searchTerm = event.target.value.toLowerCase();
+
+        // this.debounceTimer = setTimeout(() => {
         this.applyFilters();
+        // }, DEBOUNCE);
     }
 
     /** Executes if Filter component receives invalid filter */
@@ -329,7 +342,6 @@ export default class FieldPicker extends LightningElement {
         return !this.selectedField;
     }
 
-    //new
     get isLeftPanelVisible() {
         return this.depth || this.isLookupSelectionAllowed;
     }
@@ -372,7 +384,6 @@ export default class FieldPicker extends LightningElement {
             fields: 6
         };
     }
-    // \new
 
     get isLookupDisabled() {
         return !this.isLookupSelectionAllowed;
@@ -387,10 +398,6 @@ export default class FieldPicker extends LightningElement {
     }
 
     get isFilteringDisabled() {
-        return this.isUserFilteringDisabled || !this.filterOptions.length;
-    }
-
-    get lookupBreadcrumbs() {
         return this.isUserFilteringDisabled || !this.filterOptions.length;
     }
 

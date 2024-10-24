@@ -1,0 +1,9 @@
+<template>
+    <div lwc:ref="virtualContainer" style={viewportStyle} onscroll={scrollHandler}>
+        <div class="content" style={contentStyle}>
+            <div style={transformStyle}>
+                <slot></slot>
+            </div>
+        </div>
+    </div>
+</template>
