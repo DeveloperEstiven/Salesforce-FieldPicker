@@ -1,4 +1,19 @@
 {
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.enable": true,
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ],
+  "eslint.validate": [
+    "javascript",
+    "typescript",
+  ],
+  "eslint.options": {
+     "overrideConfigFile": ".eslintrc.json"
+  },
   "search.exclude": {
     "**/node_modules": true,
     "**/bower_components": true,
@@ -12,5 +27,6 @@
     "**/.DS_Store": true,
     "**/Thumbs.db": true
   },
-  "hide-files.files": []
+  "hide-files.files": [],
+  "salesforcedx-vscode-lwc.preview.typeScriptSupport": true
 }

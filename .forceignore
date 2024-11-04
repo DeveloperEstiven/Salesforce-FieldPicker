@@ -7,6 +7,11 @@ package.xml
 # LWC configuration files
 **/jsconfig.json
 **/.eslintrc.json
+**/eslint.config.mjs
 
 # LWC Jest
 **/__tests__/**
+
+# Typescript
+**/tsconfig.json
+**/*.ts

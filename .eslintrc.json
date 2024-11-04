@@ -1,0 +1,60 @@
+{
+  "extends": ["@salesforce/eslint-config-lwc/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "overrides": [
+    {
+      "files": ["**/*.{js,ts}"],
+      "rules": {
+        "@lwc/lwc/no-deprecated": "off",
+        "@lwc/lwc/no-unexpected-wire-adapter-usages": "off",
+        "no-console": "warn",
+        "no-debugger": "error",
+        "prefer-const": "error",
+        "eqeqeq": ["error", "always"],
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+        "consistent-return": "error",
+        "curly": ["error", "all"],
+        "no-var": "error",
+        "prefer-arrow-callback": "error",
+        "arrow-spacing": ["error", { "before": true, "after": true }],
+        "no-duplicate-imports": "error",
+        "object-shorthand": ["error", "always"],
+        "spaced-comment": ["error", "always", { "exceptions": ["-"] }],
+        "dot-notation": "error",
+        "space-before-function-paren": ["error", "never"],
+        "max-len": ["error", { "code": 120, "ignoreComments": true }],
+        "newline-per-chained-call": ["error", { "ignoreChainWithDepth": 2 }],
+        "array-callback-return": "error",
+        "no-multi-assign": "error",
+        "no-trailing-spaces": "error",
+        "space-infix-ops": "error",
+        "indent": ["error", 2, { "SwitchCase": 1 }],
+        "key-spacing": ["error", { "beforeColon": false, "afterColon": true }],
+        "padding-line-between-statements": [
+          "error",
+          { "blankLine": "always", "prev": "directive", "next": "*" },
+          { "blankLine": "any", "prev": "directive", "next": "directive" },
+          { "blankLine": "always", "prev": "import", "next": "*" },
+          { "blankLine": "any", "prev": "import", "next": "import" },
+          { "blankLine": "always", "prev": "*", "next": ["const", "let", "var"] },
+          { "blankLine": "always", "prev": ["const", "let", "var"], "next": "*" },
+          { "blankLine": "any", "prev": ["const", "let", "var"], "next": ["const", "let", "var"] },
+          { "blankLine": "always", "prev": "*", "next": ["class", "if", "while", "switch", "try"] },
+          { "blankLine": "always", "prev": ["class", "if", "while", "switch", "try"], "next": "*" },
+          { "blankLine": "always", "prev": "*", "next": "return" }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.test.js"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "@lwc/lwc/no-unexpected-wire-adapter-usages": "off"
+      }
+    }
+  ]
+}
